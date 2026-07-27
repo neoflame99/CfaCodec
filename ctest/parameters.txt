@@ -1,0 +1,5 @@
+## comment
+BayerImg = /Users/neoflame99/Workspace/Compress/cfacodec/ctest/bayerimg/ch0_1920x1200.raw
+width  = 1920
+height = 1200
+bpp = 2
