@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-set ( PROJECT_NAME "BayerJpeg" )
+set ( PROJECT_NAME "CfaCodec" )
 PROJECT( ${PROJECT_NAME} )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS 1)
