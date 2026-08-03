@@ -49,9 +49,13 @@ struct BayerImgInfo{
 };
 struct ProcessInfo{
     float   g;     // for NLT
-    int32_t dwt_lv;
-    int32_t ngrp;
+    uint32_t dwt_lv;
+    uint32_t ngrp; // number of pixels in a group, 4 or 8
+    uint32_t bcw;  // Bit Count Width, 5
+    uint32_t mbc;  // Maximum Bit Count (16+DWTL)
+    uint32_t sgpcd;// code length for signs of a group, 1 or 2
 };
+
 struct MsstInfo{
     int32_t w;
     int32_t h;

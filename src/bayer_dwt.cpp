@@ -37,7 +37,7 @@ void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer
         }
     }
     
-    dumpmsst(msstv,"msstv.txt", msst_info);
+    //dumpmsst(msstv,"msstv.txt", msst_info);
     //-- Converting msst to msstSm
     ConvMsst2MsstSm(dst, msstv);
     

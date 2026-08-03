@@ -27,23 +27,33 @@ int main(int args, char* argv[]){
         return -1;
     }
 
-    vector<cfapix> cfaimg;
+    vector<cfapix> cfaorg ;
     vector<cfapix> cfaproc(bayer_img_info.w * bayer_img_info.h, 0);
+    vector<cfapix> cfaimg (bayer_img_info.w * bayer_img_info.h, 0);
     vector<msstSm> msstv_enc(bayer_img_info.w * bayer_img_info.h /4, msst());
     vector<msstSm> msstv_dec(bayer_img_info.w * bayer_img_info.h /4, msst());
-    loadbayerimg(cfaimg, bayer_img_info.filename, bayer_img_info.bpp);
-    if(cfaimg.empty()){
+    loadbayerimg(cfaorg, bayer_img_info.filename, bayer_img_info.bpp);
+    if(cfaorg.empty()){
         cout << "Failed to load Bayer image: " << bayer_img_info.filename << endl;
         return -1;
     }else{
         cout << "Successfully loaded Bayer image: " << bayer_img_info.filename << endl;
         cout << "Image Total Size: " << bayer_img_info.w * bayer_img_info.h << endl;
-        cout << "cfaimg's size: " << cfaimg.size() << endl;
+        cout << "cfaimg's size: " << cfaorg.size() << endl;
+        size_t cfaorg_size = cfaorg.size();
+        for(size_t i=0; i < cfaorg_size; i++){
+            cfaimg[i] = cfaorg[i];
+        }
     }
 
-    constexpr int32_t dwt_l= DWTL;
-    constexpr int32_t ngrp = 8;
-    ProcessInfo process_info{1.0f, dwt_l, ngrp};
+    float g  = 2.f; //1.0f; // for NLT
+    uint32_t dwt_l= DWTL;
+    uint32_t ngrp = 8;
+    uint32_t bcw  = BCW;
+    uint32_t mbc  = MBC;
+    uint32_t sgpcd= SGPCD;
+
+    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd };
     BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
     MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
     QuantInfo quant_info;
@@ -52,7 +62,7 @@ int main(int args, char* argv[]){
     int32_t NB = 1U << process_info.dwt_lv; 
     for(int k=0; k < NB; ++k){
         if(k==0){
-            quant_info.Gb[k] = quant_info.Qp-4; //-k; 
+            quant_info.Gb[k] = quant_info.Qp;//-4; //-k; 
         }else{
             quant_info.Gb[k] = quant_info.Qp;
         }
@@ -78,11 +88,11 @@ int main(int args, char* argv[]){
     dumpmsst(msstv_dec, "msstv_dec.txt", msst_info);
     savebayertxt(cfaproc, "cfaproc.txt", bayer_info);
 
-    size_t sz = cfaimg.size();
+    size_t sz = cfaorg.size();
     int32_t cnt=0;
     for(size_t i=0; i < sz; i++){
-        if(cfaimg[i] != cfaproc[i]){
-            cout << "Mismatch at index " << i << ": cfaimg = " << cfaimg[i] << ", cfaproc = " << cfaproc[i] << endl;
+        if(cfaorg[i] != cfaproc[i]){
+            cout << "Mismatch at index " << i << ": cfaorg = " << cfaorg[i] << ", cfaproc = " << cfaproc[i] << endl;
             cnt++;
             if(cnt >= 10) break;
         }

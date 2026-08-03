@@ -16,7 +16,8 @@ void loadbayerimg(vector<cfapix> &cfaimg, const string filename, const int bpp){
         fclose(fp);
         return ;
     }
-    size_t numpixels = filesize / bpp;
+    size_t numpixels = filesize *8 / bpp;
+    int32_t bytppix = bpp / 8;
     int32_t *imbuf32 = (int32_t *)malloc(numpixels * sizeof(int32_t));
     if(imbuf32 == nullptr){
         free(imbuf);
@@ -28,7 +29,7 @@ void loadbayerimg(vector<cfapix> &cfaimg, const string filename, const int bpp){
     while( pp < filesize ){
         //process for bayer image
         dat |= ((int32_t)imbuf[pp]) << (8*bsz);
-        if( (++bsz) >= bpp){
+        if( (++bsz) >= bytppix){
             imbuf32[pidx++] = dat;
             bsz = 0;
             dat = 0;
