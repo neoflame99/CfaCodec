@@ -48,8 +48,9 @@ struct BayerImgInfo{
     int32_t bpp;
 };
 struct ProcessInfo{
-    float   g;
+    float   g;     // for NLT
     int32_t dwt_lv;
+    int32_t ngrp;
 };
 struct MsstInfo{
     int32_t w;

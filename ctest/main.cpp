@@ -42,7 +42,8 @@ int main(int args, char* argv[]){
     }
 
     constexpr int32_t dwt_l= DWTL;
-    ProcessInfo process_info{1.0f, dwt_l};
+    constexpr int32_t ngrp = 8;
+    ProcessInfo process_info{1.0f, dwt_l, ngrp};
     BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
     MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
     QuantInfo quant_info;
@@ -50,7 +51,11 @@ int main(int args, char* argv[]){
     quant_info.Rp = 0;
     int32_t NB = 1U << process_info.dwt_lv; 
     for(int k=0; k < NB; ++k){
-        quant_info.Gb[k] = quant_info.Qp;//-k; //4+k;
+        if(k==0){
+            quant_info.Gb[k] = quant_info.Qp-4; //-k; 
+        }else{
+            quant_info.Gb[k] = quant_info.Qp;
+        }
         quant_info.Pb[k] = 0;
     }
     quant_info.getTb();
