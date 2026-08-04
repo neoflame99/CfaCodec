@@ -101,65 +101,71 @@ void imsst(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& s
         }
     }
 }
-void fycbcr(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
+void fycc(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
     const BayerInfo& bayer_info){
     //cfa_pat:
     //0: rg1/g2b, 1: g1r/bg2, 2: g2b/rg1, 3: bg2/g1r
     int32_t rl, bl;
-    if(bayer_info.cfa_pat&0x2){
+    if(bayer_info.cfa_pat&0x2){  // blue line first
         bl = sp;
         rl = (sp+bayer_info.w);
-    }else{
+    }else{                       // red line first
         rl = sp;
         bl = (sp+bayer_info.w);
     }
 
-    bool sel= false;
-    int32_t r, b, g1, g2, gg1, gg2, gg;
-    int32_t cr, cb, y1, y2, y, yd, cc;
-    if(bayer_info.cfa_pat&0x1){
+    int32_t r, b, g1, g2, gg1, gg2;
+    int32_t g1l,g1r, g2l, g2r;
+    int32_t cr, cb, y, dg ;
+    if(bayer_info.cfa_pat&0x1){  // green ahead of R
         for(int k=0; k < bayer_info.w; k+=2){
             g1 = src[rl+k]; r = src[rl+k+1 ];
             b  = src[bl+k]; g2= src[bl+k+1 ];
-            gg = (g1+g2) >> 1;
-            gg1 = (sel)? g1: gg;
-            gg2 = (sel)? g2: gg;
+
+            g1l = g1;
+            g1r = k== bayer_info.w-2? g1 : src[rl+k+2];
+            g2l = k==0 ? g2: src[bl+k-1];
+            g2r = g2;
+
+            gg1 = (g1l+g1r)>>1;
+            gg2 = (g2l+g2r)>>1;
             cr = r - gg1;
             cb = b - gg2;
             cc = (cr+cb)>>1;
-            y1 = g1 + cc;
-            y2 = g2 + cc;
-            yd = y1 - y2;
-            y  = y1;
-            dst[dp].Y  = y ;
-            dst[dp].YdDg = yd;
+            y  = g1 + cc;
+            dg = g2 - g1;
+            dst[dp].Y    = y ;
+            dst[dp].YdDg = dg;
             dst[dp].CrCo = cr;
             dst[dp].CbCg = cb;
             dp++;
         }
-    }else{
+    }else{                       // green ahead of B
         for(int k=0; k < bayer_info.w; k+=2){
             r = src[rl+k  ]; g1 = src[rl+k+1];
             g2= src[bl+k  ];  b = src[bl+k+1];
-            gg = (g1+g2) >> 1;
-            gg1 = (sel)? g1: gg;
-            gg2 = (sel)? g2: gg;
+
+            g1l = k==0 ? g1: src[rl+k-1];
+            g1r = g1;
+            g2l = g2;
+            g2r = k== bayer_info.w-2? g2 : src[bl+k+2];
+
+            gg1 = (g1l+g1r)>>1;
+            gg2 = (g2l+g2r)>>1;
             cr = r - gg1;
             cb = b - gg2;
             cc = (cr+cb)>>1;
-            y1 = g1 + cc;
-            y2 = g2 + cc;
-            yd = y1 - y2;
-            y  = y1;
-            dst[dp].Y  = y ;
-            dst[dp].YdDg = yd;
+            y  = g1 + cc;
+            dg = g2 - g1;
+            dst[dp].Y    = y ;
+            dst[dp].YdDg = dg;
             dst[dp].CrCo = cr;
             dst[dp].CbCg = cb;
             dp++;
         }
     }
 }
-void iycbcr(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
+void iycc(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
          const BayerInfo& bayer_info){
     //cfa_pat:
     //0: rg1/g2b, 1: g1r/bg2, 2: g2b/rg1, 3: bg2/g1r
@@ -172,10 +178,11 @@ void iycbcr(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& 
         bl = (dp+bayer_info.w);
     }
 
-    bool sel = false;
-    int32_t r, b, g1, g2;
-    int32_t y, yd, y1, y2, cr, cb, cc, gg, gg1, gg2;
-    if(bayer_info.cfa_pat&0x1){
+    int32_t r, b, g1, g2, g1l, g1r, g2l, g2r;
+    int32_t y, dg, cr, cb, cc, gg, gg1, gg2;
+    int32_t sp2;
+    sp2 = sp; 
+    if(bayer_info.cfa_pat&0x1){ // G1, R / B, G2
         for(int k=0; k < bayer_info.w; k+=2){
             y  = src[sp].Y ;
             yd = src[sp].YdDg;
@@ -183,41 +190,72 @@ void iycbcr(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& 
             cb = src[sp].CbCg;
             sp++;
 
-            y1 = y;
-            y2 = y-yd;
             cc = (cr+cb)>>1;
-            g1 = y1 - cc; 
-            g2 = y2 - cc;
-            gg = (g1+g2) >> 1;
-            gg1 = sel ? g1 : gg;
-            gg2 = sel ? g2 : gg;
-            r  = cr + gg1;
-            b  = cb + gg2; 
+            g1 = y - cc; 
+            g2 = dg + g1;
 
-            dst[rl+k] = g1 ; dst[rl+k+1 ] = r ; 
-            dst[bl+k] = b  ; dst[bl+k+1 ] = g2;  
+            dst[rl+k  ] = g1 ; 
+            dst[bl+k+1] = g2;  
         }
-    }else{
         for(int k=0; k < bayer_info.w; k+=2){
-            y  = src[sp].Y ;
-            yd = src[sp].YdDg;
+            cr = src[sp2].CrCo;
+            cb = src[sp2].CbCg;
+            sp2++;
+
+            g1 = dst[rl+k  ]; 
+            g2 = dst[bl+k+1];
+
+            g1l= g1;
+            g1r= k== bayer_info.w-2? g1: dst[rl+k+2];
+            g2l= k== 0? g2: dst[bl+k-1];
+            g2r= g2;
+
+            gg1 = (g1l+g1r)>>1;
+            gg2 = (g2l+g2r)>>1;
+
+            r  = cr + gg1;
+            b  = cb + gg2; 
+
+            dst[rl+k+1] = r ; 
+            dst[bl+k  ] = b ; 
+        }
+
+    }else{   // R,G1 / G2,B 
+        for(int k=0; k < bayer_info.w; k+=2){
+            y  = src[sp].Y   ;
+            dg = src[sp].YdDg;
             cr = src[sp].CrCo;
             cb = src[sp].CbCg;
             sp++;
 
-            y1 = y;
-            y2 = y-yd;
             cc = (cr+cb)>>1;
-            g1 = y1 - cc; 
-            g2 = y2 - cc;
-            gg = (g1+g2) >> 1;
-            gg1 = sel ? g1 : gg;
-            gg2 = sel ? g2 : gg;
+            g1 = y - cc; 
+            g2 = dg + g1;
+
+            dst[rl+k+1]= g1;
+            dst[bl+k  ]= g2;
+        }
+        for(int k=0; k < bayer_info.w; k+=2){
+            cr = src[sp2].CrCo;
+            cb = src[sp2].CbCg;
+            sp2++;
+
+            g1 = dst[rl+k+1]; 
+            g2 = dst[bl+k  ];
+
+            g1l= k== 0? g1: dst[rl+k-1];
+            g1r= g1;
+            g2l= g2;
+            g2r= k== bayer_info.w-2? g2: dst[bl+k+2];
+
+            gg1 = (g1l+g1r)>>1;
+            gg2 = (g2l+g2r)>>1;
+
             r  = cr + gg1;
             b  = cb + gg2; 
 
-            dst[rl+k  ]= r ;  dst[rl+k+1]= g1;
-            dst[bl+k  ]= g2;  dst[bl+k+1]=  b;
+            dst[rl+k  ]= r; 
+            dst[bl+k+1]= b;
         }
     }
 }

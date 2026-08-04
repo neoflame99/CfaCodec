@@ -9,8 +9,8 @@ void fmsst(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& s
     const BayerInfo& bayer_info);
 void imsst(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
     const BayerInfo& bayer_info);
-void fycbcr(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
+void fycc(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
     const BayerInfo& bayer_info);
-void iycbcr(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
+void iycc(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
     const BayerInfo& bayer_info);
 #endif
