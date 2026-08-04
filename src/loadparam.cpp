@@ -33,8 +33,25 @@ static bool parseInt(const std::string& value, int32_t& out)
     out = parsed;
     return true;
 }
+static bool parseUInt(const std::string& value, uint32_t& out)
+{
+    std::istringstream iss(value);
+    uint32_t parsed = 0;
+    iss >> parsed;
+    if(iss.fail()){
+        return false;
+    }
 
-bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, const std::string& param_file)
+    iss >> std::ws;
+    if(!iss.eof()){
+        return false;
+    }
+
+    out = parsed;
+    return true;
+}
+
+bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, ProcessInfo& proc_info, const std::string& param_file)
 {
     std::ifstream ifs(param_file);
     if(!ifs.is_open()){
@@ -67,18 +84,64 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, const std::string& param_fil
         const std::string key = trim(line.substr(0, equal_pos));
         const std::string value = trim(line.substr(equal_pos + 1));
 
+        save_info.bitstream_filename = "bitstream.bin";
+        save_info.save_cfaimg = false;
+        save_info.save_cfaproc = false;
+        save_info.save_msstv_enc = false;
+        save_info.save_msstv_dec = false;
         if(key == "BayerImg"){
             parsed_info.filename = value;
             has_filename = !value.empty();
-        }
-        else if(key == "width"){
+        }else if(key == "width"){
             has_width = parseInt(value, parsed_info.w);
-        }
-        else if(key == "height"){
+        }else if(key == "height"){
             has_height = parseInt(value, parsed_info.h);
-        }
-        else if(key == "bpp"){
+        }else if(key == "bpp"){
             has_bpp = parseInt(value, parsed_info.bpp);
+        }else if(key == "bitstream_filename"){
+            save_info.bitstream_filename = value;
+        }else if(key == "save_cfaimg"){
+            save_info.save_cfaimg = (value == "true" || value == "1");
+        }else if(key == "save_cfaproc"){
+            save_info.save_cfaproc = (value == "true" || value == "1");
+        }else if(key == "save_msstv_enc"){
+            save_info.save_msstv_enc = (value == "true" || value == "1");
+        }else if(key == "save_msstv_dec"){
+            save_info.save_msstv_dec = (value == "true" || value == "1");
+        }else if(key == "g"){
+            float g_value;
+            std::istringstream iss(value);
+            iss >> g_value;
+            if(!iss.fail() && iss.eof()){
+                proc_info.g = g_value;
+            }
+        }else if(key == "dwt_lv"){
+            uint32_t dwt_lv;
+            if(parseUInt(value, dwt_lv)){
+                proc_info.dwt_lv = dwt_lv;
+            }
+        }else if(key == "ngrp"){
+            uint32_t ngrp;
+            if(parseUInt(value, ngrp)){
+                proc_info.ngrp = ngrp;
+            }
+        //}else if(key == "bcw"){
+        //    uint32_t bcw;
+        //    if(parseUInt(value, bcw)){
+        //        proc_info.bcw = bcw;
+        //    }
+        //}else if(key == "mbc"){
+        //    uint32_t mbc;
+        //    if(parseUInt(value, mbc)){
+        //        proc_info.mbc = mbc;
+        //    }
+        }else if(key == "sgpcd"){
+            uint32_t sgpcd;
+            if(parseUInt(value, sgpcd)){
+                proc_info.sgpcd = sgpcd;
+            }
+        }else if(key == "sel_ycc"){
+            proc_info.sel_ycc = (value == "true" || value == "1");
         }
     }
 

@@ -47,6 +47,13 @@ struct BayerImgInfo{
     int32_t h;
     int32_t bpp;
 };
+struct SaveInfo{
+    string bitstream_filename;
+    bool save_cfaimg;
+    bool save_cfaproc;
+    bool save_msstv_enc;
+    bool save_msstv_dec;
+};
 struct ProcessInfo{
     float   g;     // for NLT
     uint32_t dwt_lv;

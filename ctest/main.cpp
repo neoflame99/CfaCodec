@@ -21,11 +21,23 @@ int main(int args, char* argv[]){
 
     string param_file = argv[1];
     BayerImgInfo bayer_img_info;
-    bool loadparam_result = loadBayerImgInfo(bayer_img_info, param_file);
+    SaveInfo save_info;
+
+    float g  = 1.f; //1.0f; // for NLT
+    uint32_t dwt_l= DWTL;
+    uint32_t ngrp = 8;
+    uint32_t bcw  = BCW;
+    uint32_t mbc  = MBC;
+    uint32_t sgpcd= SGPCD;
+    bool sel_ycc  = false;
+    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc };
+    bool loadparam_result = loadBayerImgInfo(bayer_img_info, save_info, process_info, param_file);
     if(!loadparam_result){
         cout << "Failed to load parameter file: " << param_file << endl;
         return -1;
     }
+
+    process_info.mbc = bayer_img_info.bpp + process_info.dwt_lv;
 
     vector<cfapix> cfaorg ;
     vector<cfapix> cfaproc(bayer_img_info.w * bayer_img_info.h, 0);
@@ -46,15 +58,6 @@ int main(int args, char* argv[]){
         }
     }
 
-    float g  = 1.f; //1.0f; // for NLT
-    uint32_t dwt_l= DWTL;
-    uint32_t ngrp = 8;
-    uint32_t bcw  = BCW;
-    uint32_t mbc  = MBC;
-    uint32_t sgpcd= SGPCD;
-    bool sel_ycc  = true;
-
-    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc };
     BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
     MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
     QuantInfo quant_info;
@@ -77,17 +80,36 @@ int main(int args, char* argv[]){
         entp.push_back(rRow);
     }
 
-    savebayertxt(cfaimg, "cfaimg.txt", bayer_info);
 
+    //=========== Encoding ======================//
     bayer_fdwt(msstv_enc, cfaimg, bayer_info, process_info, quant_info);
     enc_entropy(entp, msstv_enc, msst_info, process_info, quant_info);
-    dumpmsst(msstv_enc, "msstv_enc.txt", msst_info);
-    //--
+    //===========================================//
+
+    //--------Dump Enc Side----------------------//
+    if(save_info.save_cfaimg){
+        savebayertxt(cfaorg, "cfaimg.txt", bayer_info);
+    }
+    if(save_info.save_msstv_enc){
+        dumpmsst(msstv_enc, "msstv_enc.txt", msst_info);
+    }
+    //-------------------------------------------//
+    
+    write_bitstream(entp, save_info.bitstream_filename);
+
+    //=========== Decoding ======================//
     dec_entropy(entp, msstv_dec, msst_info, process_info, quant_info);
     bayer_idwt(cfaproc, msstv_dec, bayer_info, process_info, quant_info);
+    //===========================================//
 
-    dumpmsst(msstv_dec, "msstv_dec.txt", msst_info);
-    savebayertxt(cfaproc, "cfaproc.txt", bayer_info);
+    //--------Dump Dec Side----------------------//
+    if(save_info.save_msstv_dec){
+        dumpmsst(msstv_dec, "msstv_dec.txt", msst_info);
+    }
+    if(save_info.save_cfaproc){
+        savebayertxt(cfaproc, "cfaproc.txt", bayer_info);
+    }
+    //-------------------------------------------//
 
     size_t sz = cfaorg.size();
     int32_t cnt=0;
@@ -98,7 +120,6 @@ int main(int args, char* argv[]){
             if(cnt >= 10) break;
         }
     }
-
 
     return 0;
 }

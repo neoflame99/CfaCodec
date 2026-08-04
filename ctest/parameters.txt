@@ -3,3 +3,14 @@ BayerImg = /Users/neoflame99/Workspace/Compress/cfacodec/ctest/bayerimg/ch0_1920
 width  = 1920
 height = 1200
 bpp = 16
+
+bitstream_filename = bitstream.bin
+save_cfaimg    = false
+save_cfaproc   = false
+save_msstv_enc = false
+save_msstv_dec = false
+
+dwt_lv  = 1
+ngrp    = 8
+sgpcd   = 1
+sel_ycc = false
