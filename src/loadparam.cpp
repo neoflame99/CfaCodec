@@ -2,7 +2,8 @@
 
 #include <fstream>
 #include <sstream>
-
+#include <algorithm>
+#include <cctype>
 
 static std::string trim(const std::string& value)
 {
@@ -81,8 +82,9 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
             continue;
         }
 
-        const std::string key = trim(line.substr(0, equal_pos));
-        const std::string value = trim(line.substr(equal_pos + 1));
+        std::string key = trim(line.substr(0, equal_pos));
+        std::string value = trim(line.substr(equal_pos + 1));
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c){ return std::tolower(c); });
 
         save_info.bitstream_filename = "bitstream.bin";
         save_info.save_cfaimg = false;

@@ -13,4 +13,4 @@ save_msstv_dec = false
 dwt_lv  = 1
 ngrp    = 8
 sgpcd   = 1
-sel_ycc = false
+sel_ycc = true 
