@@ -54,6 +54,7 @@ struct ProcessInfo{
     uint32_t bcw;  // Bit Count Width, 5
     uint32_t mbc;  // Maximum Bit Count (16+DWTL)
     uint32_t sgpcd;// code length for signs of a group, 1 or 2
+    bool     sel_ycc; // false: msst, true: ycc
 };
 
 struct MsstInfo{

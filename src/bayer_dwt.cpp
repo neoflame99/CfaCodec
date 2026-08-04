@@ -17,10 +17,16 @@ void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer
     }
     //-- Perform forward MSST on the Bayer image
     int32_t dp = 0, sp = 0;
-    for(int32_t h = 0; h < bayer_info.h; h+=2){
-        fmsst(msstv, dp, src, sp, bayer_info);
-        //fycbcr(msstv, dp, src, sp, bayer_info);
-        sp += bayer_info.w*2;
+    if( proc_info.sel_ycc ){
+        for(int32_t h = 0; h < bayer_info.h; h+=2){
+            fycc(msstv, dp, src, sp, bayer_info);
+            sp += bayer_info.w*2;
+        }
+    }else{
+        for(int32_t h = 0; h < bayer_info.h; h+=2){
+            fmsst(msstv, dp, src, sp, bayer_info);
+            sp += bayer_info.w*2;
+        }
     }
     cout << "bayer_fdwt, fmsst: dp = " << dp << ", sp = " << sp << endl;
 
@@ -76,10 +82,16 @@ void bayer_idwt(vector<cfapix>& dst, vector<msstSm>& src, const BayerInfo& bayer
     }
     //-- Perform inverse MSST on the DWT data
     int32_t dp = 0, sp = 0;
-    for(int32_t h = 0; h < bayer_info.h; h+=2){
-        imsst(dst, dp, msstv, sp, bayer_info);
-        //iycbcr(dst, dp, msstv, sp, bayer_info);
-        dp += bayer_info.w*2;
+    if( proc_info.sel_ycc ){
+        for(int32_t h = 0; h < bayer_info.h; h+=2){
+            iycc(dst, dp, msstv, sp, bayer_info);
+            dp += bayer_info.w*2;
+        }
+    }else{
+        for(int32_t h = 0; h < bayer_info.h; h+=2){
+            imsst(dst, dp, msstv, sp, bayer_info);
+            dp += bayer_info.w*2;
+        }
     }
     cout << "bayer_idwt, imsst: dp = " << dp << ", sp = " << sp << endl;
     //-- Perform inverse NLT on the reconstructed Bayer image if gamma is not 1.0

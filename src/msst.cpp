@@ -116,7 +116,7 @@ void fycc(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp
 
     int32_t r, b, g1, g2, gg1, gg2;
     int32_t g1l,g1r, g2l, g2r;
-    int32_t cr, cb, y, dg ;
+    int32_t cr, cb, y, dg, cc ;
     if(bayer_info.cfa_pat&0x1){  // green ahead of R
         for(int k=0; k < bayer_info.w; k+=2){
             g1 = src[rl+k]; r = src[rl+k+1 ];
@@ -185,7 +185,7 @@ void iycc(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp
     if(bayer_info.cfa_pat&0x1){ // G1, R / B, G2
         for(int k=0; k < bayer_info.w; k+=2){
             y  = src[sp].Y ;
-            yd = src[sp].YdDg;
+            dg = src[sp].YdDg;
             cr = src[sp].CrCo;
             cb = src[sp].CbCg;
             sp++;

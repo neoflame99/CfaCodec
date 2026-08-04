@@ -46,14 +46,15 @@ int main(int args, char* argv[]){
         }
     }
 
-    float g  = 2.f; //1.0f; // for NLT
+    float g  = 1.f; //1.0f; // for NLT
     uint32_t dwt_l= DWTL;
     uint32_t ngrp = 8;
     uint32_t bcw  = BCW;
     uint32_t mbc  = MBC;
     uint32_t sgpcd= SGPCD;
+    bool sel_ycc  = true;
 
-    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd };
+    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc };
     BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
     MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
     QuantInfo quant_info;
