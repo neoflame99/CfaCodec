@@ -95,7 +95,7 @@ int main(int args, char* argv[]){
     }
     //-------------------------------------------//
     
-    write_bitstream(entp, save_info.bitstream_filename);
+    write_bitstream(entp, save_info.bitstream_fname);
 
     //=========== Decoding ======================//
     dec_entropy(entp, msstv_dec, msst_info, process_info, quant_info);
@@ -110,6 +110,9 @@ int main(int args, char* argv[]){
         savebayertxt(cfaproc, "cfaproc.txt", bayer_info);
     }
     //-------------------------------------------//
+    
+    write_dec_cfa(save_info.dec_cfa_fname, cfaproc, bayer_info, save_info.dec_cfa_csi2_style);
+    write_report(save_info.codec_report_fname, bayer_info, process_info, save_info, quant_info, bayer_img_info.filename); 
 
     size_t sz = cfaorg.size();
     int32_t cnt=0;

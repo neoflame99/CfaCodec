@@ -48,7 +48,10 @@ struct BayerImgInfo{
     int32_t bpp;
 };
 struct SaveInfo{
-    string bitstream_filename;
+    string bitstream_fname;
+    string codec_report_fname;
+    string dec_cfa_fname;
+    bool dec_cfa_csi2_style;
     bool save_cfaimg;
     bool save_cfaproc;
     bool save_msstv_enc;

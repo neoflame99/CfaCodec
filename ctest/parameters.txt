@@ -5,6 +5,9 @@ height = 1200
 bpp = 16
 
 bitstream_filename = bitstream.bin
+codec_report_filename = codec_report.rpt
+dec_cfa_filename = bayer_dec.raw
+dec_cfa_csi2_style = true 
 save_cfaimg    = false
 save_cfaproc   = false
 save_msstv_enc = false

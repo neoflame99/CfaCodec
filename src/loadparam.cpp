@@ -84,9 +84,13 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
 
         std::string key = trim(line.substr(0, equal_pos));
         std::string value = trim(line.substr(equal_pos + 1));
-        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c){ return std::tolower(c); });
+        string value_l = value;
+        std::transform(value.begin(), value.end(), value_l.begin(), [](unsigned char c){ return std::tolower(c); });
 
-        save_info.bitstream_filename = "bitstream.bin";
+        save_info.bitstream_fname = "bitstream.bin";
+        save_info.codec_report_fname = "codec_report.rpt";
+        save_info.dec_cfa_fname = "dec_cfa.raw";
+        save_info.dec_cfa_csi2_style = false;
         save_info.save_cfaimg = false;
         save_info.save_cfaproc = false;
         save_info.save_msstv_enc = false;
@@ -101,15 +105,21 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
         }else if(key == "bpp"){
             has_bpp = parseInt(value, parsed_info.bpp);
         }else if(key == "bitstream_filename"){
-            save_info.bitstream_filename = value;
+            save_info.bitstream_fname = value;
+        }else if(key == "codec_report_filename"){
+            save_info.codec_report_fname = value;
+        }else if(key == "dec_cfa_filename"){
+            save_info.dec_cfa_fname = value;
+        }else if(key == "dec_cfa_csi2_style"){
+            save_info.dec_cfa_csi2_style = (value_l == "true" || value_l == "1");
         }else if(key == "save_cfaimg"){
-            save_info.save_cfaimg = (value == "true" || value == "1");
+            save_info.save_cfaimg = (value_l == "true" || value_l == "1");
         }else if(key == "save_cfaproc"){
-            save_info.save_cfaproc = (value == "true" || value == "1");
+            save_info.save_cfaproc = (value_l == "true" || value_l == "1");
         }else if(key == "save_msstv_enc"){
-            save_info.save_msstv_enc = (value == "true" || value == "1");
+            save_info.save_msstv_enc = (value_l == "true" || value_l == "1");
         }else if(key == "save_msstv_dec"){
-            save_info.save_msstv_dec = (value == "true" || value == "1");
+            save_info.save_msstv_dec = (value_l == "true" || value_l == "1");
         }else if(key == "g"){
             float g_value;
             std::istringstream iss(value);
@@ -143,7 +153,7 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
                 proc_info.sgpcd = sgpcd;
             }
         }else if(key == "sel_ycc"){
-            proc_info.sel_ycc = (value == "true" || value == "1");
+            proc_info.sel_ycc = (value_l == "true" || value_l == "1");
         }
     }
 
