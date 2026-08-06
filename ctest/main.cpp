@@ -22,6 +22,7 @@ int main(int args, char* argv[]){
     string param_file = argv[1];
     BayerImgInfo bayer_img_info;
     SaveInfo save_info;
+    QuantInfo quant_info;
 
     float g  = 1.f; //1.0f; // for NLT
     uint32_t dwt_l= DWTL;
@@ -31,25 +32,38 @@ int main(int args, char* argv[]){
     uint32_t sgpcd= SGPCD;
     bool sel_ycc  = false;
     ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc };
-    bool loadparam_result = loadBayerImgInfo(bayer_img_info, save_info, process_info, param_file);
+    bool loadparam_result = loadBayerImgInfo(bayer_img_info, save_info, 
+                                  process_info, quant_info, param_file);
     if(!loadparam_result){
         cout << "Failed to load parameter file: " << param_file << endl;
         return -1;
     }
 
     process_info.mbc = bayer_img_info.bpp + process_info.dwt_lv;
+    //int32_t NB = process_info.dwt_lv+1; // just horizontal level, it is dwt_lv+1
+    //quant_info.Qp = 5;
+    //for(int k=0; k < NB; ++k){
+    //    if(k==0){
+    //        quant_info.Gb[k] = quant_info.Qp;//-4; //-k; 
+    //    }else{
+    //        quant_info.Gb[k] = quant_info.Qp;
+    //    }
+    //}
+    quant_info.getTb();
 
     vector<cfapix> cfaorg ;
     vector<cfapix> cfaproc(bayer_img_info.w * bayer_img_info.h, 0);
     vector<cfapix> cfaimg (bayer_img_info.w * bayer_img_info.h, 0);
     vector<msstSm> msstv_enc(bayer_img_info.w * bayer_img_info.h /4, msst());
     vector<msstSm> msstv_dec(bayer_img_info.w * bayer_img_info.h /4, msst());
-    loadbayerimg(cfaorg, bayer_img_info.filename, bayer_img_info.bpp);
-    if(cfaorg.empty()){
+    const size_t input_pixels = static_cast<size_t>(bayer_img_info.w) * bayer_img_info.h;
+    if(!loadbayerimg(cfaorg, bayer_img_info.filename, bayer_img_info.bpp,
+                     bayer_img_info.csi2_style, input_pixels)){
         cout << "Failed to load Bayer image: " << bayer_img_info.filename << endl;
         return -1;
     }else{
         cout << "Successfully loaded Bayer image: " << bayer_img_info.filename << endl;
+        cout << "Input packing: " << (bayer_img_info.csi2_style ? "CSI-2" : "compact") << endl;
         cout << "Image Total Size: " << bayer_img_info.w * bayer_img_info.h << endl;
         cout << "cfaimg's size: " << cfaorg.size() << endl;
         size_t cfaorg_size = cfaorg.size();
@@ -57,22 +71,8 @@ int main(int args, char* argv[]){
             cfaimg[i] = cfaorg[i];
         }
     }
-
     BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
     MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
-    QuantInfo quant_info;
-    quant_info.Qp = 5;
-    quant_info.Rp = 0;
-    int32_t NB = 1U << process_info.dwt_lv; 
-    for(int k=0; k < NB; ++k){
-        if(k==0){
-            quant_info.Gb[k] = quant_info.Qp;//-4; //-k; 
-        }else{
-            quant_info.Gb[k] = quant_info.Qp;
-        }
-        quant_info.Pb[k] = 0;
-    }
-    quant_info.getTb();
 
     vector<vector<uint8_t>> entp;
     for(int32_t k=0; k < msst_info.h; ++k){

@@ -46,6 +46,7 @@ struct BayerImgInfo{
     int32_t w;
     int32_t h;
     int32_t bpp;
+    bool csi2_style = false; // false: compact bitstream, true: CSI-2 RAW packing
 };
 struct SaveInfo{
     string bitstream_fname;

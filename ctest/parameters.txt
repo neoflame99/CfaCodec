@@ -1,19 +1,32 @@
 ## comment
+### Information for CFA image
 BayerImg = /Users/neoflame99/Workspace/Compress/cfacodec/ctest/bayerimg/ch0_1920x1200.raw
 width  = 1920
 height = 1200
 bpp = 16
+# false: continuous LSB-first compact storage, true: CSI-2 RAW10/12/14/16 packing
+bayer_img_csi2_style = false
 
+### save output or intermediate data
 bitstream_filename = bitstream.bin
 codec_report_filename = codec_report.rpt
 dec_cfa_filename = bayer_dec.raw
-dec_cfa_csi2_style = true 
+dec_cfa_csi2_style = false 
 save_cfaimg    = false
 save_cfaproc   = false
 save_msstv_enc = false
 save_msstv_dec = false
 
+### process parameters
 dwt_lv  = 1
 ngrp    = 8
 sgpcd   = 1
-sel_ycc = true 
+sel_ycc = false 
+
+### Quantization parameters
+Qp = 5
+Gb[0] = 5
+Gb[1] = 5
+Gb[2] = 5
+Gb[3] = 5
+Gb[4] = 5

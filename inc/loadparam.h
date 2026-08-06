@@ -6,6 +6,7 @@
 #ifndef _LOADPARAM_H_
 #define _LOADPARAM_H_
 
-bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, ProcessInfo& process_info, const std::string& param_file);
+bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, ProcessInfo& process_info,
+                      QuantInfo& quant_info, const std::string& param_file);
 
 #endif //_LOADPARAM_H_

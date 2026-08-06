@@ -52,7 +52,17 @@ static bool parseUInt(const std::string& value, uint32_t& out)
     return true;
 }
 
-bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, ProcessInfo& proc_info, const std::string& param_file)
+static bool parseIndexedKey(const std::string& key, const std::string& name, int32_t& index)
+{
+    if(key.size() <= name.size() + 2 || key.compare(0, name.size(), name) != 0 ||
+       key[name.size()] != '[' || key.back() != ']'){
+        return false;
+    }
+    return parseInt(key.substr(name.size() + 1, key.size() - name.size() - 2), index);
+}
+
+bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, ProcessInfo& proc_info,
+                      QuantInfo& quant_info, const std::string& param_file)
 {
     std::ifstream ifs(param_file);
     if(!ifs.is_open()){
@@ -60,10 +70,24 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
     }
 
     BayerImgInfo parsed_info;
+    parsed_info.csi2_style = false;
+    QuantInfo parsed_quant_info;
+    parsed_quant_info.Qp = 5;
+    bool gb_specified[MNB] = {};
     bool has_filename = false;
     bool has_width = false;
     bool has_height = false;
     bool has_bpp = false;
+    bool has_invalid_quant_param = false;
+
+    save_info.bitstream_fname = "bitstream.bin";
+    save_info.codec_report_fname = "codec_report.rpt";
+    save_info.dec_cfa_fname = "dec_cfa.raw";
+    save_info.dec_cfa_csi2_style = false;
+    save_info.save_cfaimg = false;
+    save_info.save_cfaproc = false;
+    save_info.save_msstv_enc = false;
+    save_info.save_msstv_dec = false;
 
     std::string line;
     while(std::getline(ifs, line)){
@@ -87,14 +111,6 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
         string value_l = value;
         std::transform(value.begin(), value.end(), value_l.begin(), [](unsigned char c){ return std::tolower(c); });
 
-        save_info.bitstream_fname = "bitstream.bin";
-        save_info.codec_report_fname = "codec_report.rpt";
-        save_info.dec_cfa_fname = "dec_cfa.raw";
-        save_info.dec_cfa_csi2_style = false;
-        save_info.save_cfaimg = false;
-        save_info.save_cfaproc = false;
-        save_info.save_msstv_enc = false;
-        save_info.save_msstv_dec = false;
         if(key == "BayerImg"){
             parsed_info.filename = value;
             has_filename = !value.empty();
@@ -104,6 +120,22 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
             has_height = parseInt(value, parsed_info.h);
         }else if(key == "bpp"){
             has_bpp = parseInt(value, parsed_info.bpp);
+        }else if(key == "Qp"){
+            if(!parseInt(value, parsed_quant_info.Qp)){
+                has_invalid_quant_param = true;
+            }
+        }else if(key.rfind("Gb[", 0) == 0){
+            int32_t index = 0;
+            int32_t gb = 0;
+            if(!parseIndexedKey(key, "Gb", index) || index < 0 || index >= MNB ||
+               !parseInt(value, gb)){
+                has_invalid_quant_param = true;
+            }else{
+                parsed_quant_info.Gb[index] = gb;
+                gb_specified[index] = true;
+            }
+        }else if(key == "bayer_img_csi2_style"){
+            parsed_info.csi2_style = (value_l == "true" || value_l == "1");
         }else if(key == "bitstream_filename"){
             save_info.bitstream_fname = value;
         }else if(key == "codec_report_filename"){
@@ -157,10 +189,17 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
         }
     }
 
-    if(!(has_filename && has_width && has_height && has_bpp)){
+    if(!(has_filename && has_width && has_height && has_bpp) || has_invalid_quant_param){
         return false;
     }
 
+    for(int32_t k = 0; k < MNB; ++k){
+        if(!gb_specified[k]){
+            parsed_quant_info.Gb[k] = parsed_quant_info.Qp;
+        }
+    }
+
     bayer_img_info = parsed_info;
+    quant_info = parsed_quant_info;
     return true;
 }
