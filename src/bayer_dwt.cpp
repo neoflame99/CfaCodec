@@ -1,5 +1,14 @@
 #include "bayer_dwt.h"
 #include "monitor.h"
+static inline void sat(vector<cfapix>& dst, const uint32_t mxv){
+    for(size_t k=0; k < dst.size(); ++k){
+        if(dst[k] < 0){
+            dst[k] = 0;
+        }else if(dst[k] > mxv){
+            dst[k] = mxv;
+        }
+    }
+}
 void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer_info,
     const ProcessInfo& proc_info, const QuantInfo& quant_info)
 {
@@ -96,13 +105,7 @@ void bayer_idwt(vector<cfapix>& dst, vector<msstSm>& src, const BayerInfo& bayer
         }
     }
     uint32_t mxv = (1U << bayer_info.bpp) - 1;
-    for(size_t k=0; k < dst.size(); ++k){
-        if(dst[k] < 0){
-            dst[k] = 0;
-        }else if(dst[k] > mxv){
-            dst[k] = mxv;
-        }
-    }
+    sat(dst, mxv);
     //fprintf(stdout, "bayer_val[888962] = %d\n", dst[888962]);
     cout << "bayer_idwt, imsst: dp = " << dp << ", sp = " << sp << endl;
     //-- Perform inverse NLT on the reconstructed Bayer image if gamma is not 1.0
