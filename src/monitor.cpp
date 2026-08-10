@@ -193,8 +193,12 @@ static void write_compact(FILE* fp, const vector<cfapix>& cfa, int32_t bpp){
     vector<uint8_t> buf((total_bits+7)/8, 0);
     size_t pos = 0, bp = 0;
     uint32_t mask = (bpp >= 32) ? 0xFFFFFFFFU : ((1U << bpp) - 1);
+    //fprintf(stdout, "bayer_val[888962] = %d\n", cfa[888962]);
     for(size_t i=0; i < n; ++i){
         uint32_t v = (uint32_t)cfa[i] & mask;
+        //if(i == 888962){
+        //    fprintf(stdout, "write_compact: i=%zu, v=%d\n", i, v);
+        //}
         for(int32_t b=0; b < bpp; ++b){
             buf[pos] |= (uint8_t)(((v >> b) & 0x1) << bp);
             bp++;
@@ -204,6 +208,11 @@ static void write_compact(FILE* fp, const vector<cfapix>& cfa, int32_t bpp){
             }
         }
     }
+    uint32_t d = buf[888962*2+1];
+    d <<= 8;
+    d |= buf[888962*2];
+
+    //fprintf(stdout, "bayer_val[888962] = %d\n", d);
     fwrite(buf.data(), sizeof(uint8_t), buf.size(), fp);
 }
 
@@ -251,7 +260,7 @@ void write_dec_cfa(const string& fname, const vector<cfapix>& cfa, const BayerIn
 
 void write_report(const string& fname,const BayerInfo& bayer_info, 
         ProcessInfo& proc_info, SaveInfo& save_info, 
-        QuantInfo& quant_info, const string& InputBayerFname)
+        QuantInfo& quant_info, size_t tsz, const string& InputBayerFname)
 {
     FILE *fp = fopen(fname.c_str(), "w");
     if(fp == nullptr){
@@ -265,6 +274,7 @@ void write_report(const string& fname,const BayerInfo& bayer_info,
     fprintf(fp, "    pattern: %5d //0: rggb, 1: grbg, 2: gbrg, 3: bggr\n", bayer_info.cfa_pat);
     fprintf(fp, "    bpp    : %5d\n", bayer_info.bpp);
     fprintf(fp, "Save Info:\n");
+    fprintf(fp, "    bitstream size : %zu bytes\n", tsz);
     fprintf(fp, "    bitstream_fname: %s\n", save_info.bitstream_fname.c_str());
     fprintf(fp, "    dec_cfa_fname  : %s\n", save_info.dec_cfa_fname.c_str());
     fprintf(fp, "    dec_cfa_csi2_style: %d\n", save_info.dec_cfa_csi2_style);

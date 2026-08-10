@@ -7,10 +7,18 @@ static inline void quant(vector<msstSm>& msstv, const int32_t S, const int32_t N
 
     int32_t Tb = quant_info.Tb[B];
     for(int32_t k =S; k < N+S; ++k){
+        //if( k == 221761){
+        //    printf("k = %d, Tb = %d\n", k, Tb);
+        //    printf("mY = %d, mYdDg = %d, mCrCo = %d, mCbCg = %d\n", msstv[k].mY, msstv[k].mYdDg, msstv[k].mCrCo, msstv[k].mCbCg);
+        //}
         msstv[k].mY  >>= Tb;
         msstv[k].mYdDg >>= Tb; 
         msstv[k].mCrCo >>= Tb;
         msstv[k].mCbCg >>= Tb;
+        //if( k == 221761){
+        //    printf("mY = %d, mYdDg = %d, mCrCo = %d, mCbCg = %d\n", msstv[k].mY, msstv[k].mYdDg, msstv[k].mCrCo, msstv[k].mCbCg);
+        //    int a=10;
+        //}
     }
     // truncation bits and quantization step to be determined 
 }
@@ -20,10 +28,18 @@ static inline void iquant(vector<msstSm>& msstv, const int32_t S, const int32_t 
     // N : band length 
     int32_t Tb = quant_info.Tb[B];
     for(int32_t k =S; k < N+S; ++k){
+        //if( k == 221761){
+        //    printf("k = %d, Tb = %d\n", k, Tb);
+        //    printf("mY = %d, mYdDg = %d, mCrCo = %d, mCbCg = %d\n", msstv[k].mY, msstv[k].mYdDg, msstv[k].mCrCo, msstv[k].mCbCg);
+        //}
         msstv[k].mY  <<= Tb;
         msstv[k].mYdDg <<= Tb; 
         msstv[k].mCrCo <<= Tb;
         msstv[k].mCbCg <<= Tb;
+        //if( k == 221761){
+        //    printf("mY = %d, mYdDg = %d, mCrCo = %d, mCbCg = %d\n", msstv[k].mY, msstv[k].mYdDg, msstv[k].mCrCo, msstv[k].mCbCg);
+        //    int a=10;
+        //}
     }
     // truncation bits and quantization step to be determined 
 }

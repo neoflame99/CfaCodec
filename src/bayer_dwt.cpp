@@ -15,6 +15,8 @@ void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer
     if(proc_info.g != 1.0f){
         nlt(src, mxv, proc_info.g);
     }
+
+    //fprintf(stdout, "bayer_val[888962] = %d\n", src[888962]);
     //-- Perform forward MSST on the Bayer image
     int32_t dp = 0, sp = 0;
     if( proc_info.sel_ycc ){
@@ -93,9 +95,18 @@ void bayer_idwt(vector<cfapix>& dst, vector<msstSm>& src, const BayerInfo& bayer
             dp += bayer_info.w*2;
         }
     }
+    uint32_t mxv = (1U << bayer_info.bpp) - 1;
+    for(size_t k=0; k < dst.size(); ++k){
+        if(dst[k] < 0){
+            dst[k] = 0;
+        }else if(dst[k] > mxv){
+            dst[k] = mxv;
+        }
+    }
+    //fprintf(stdout, "bayer_val[888962] = %d\n", dst[888962]);
     cout << "bayer_idwt, imsst: dp = " << dp << ", sp = " << sp << endl;
     //-- Perform inverse NLT on the reconstructed Bayer image if gamma is not 1.0
-    int32_t mxv = (1U << bayer_info.bpp) - 1;
+    //int32_t mxv = (1U << bayer_info.bpp) - 1;
     if(proc_info.g != 1.0f){
         inlt(dst, mxv, proc_info.g);
     }

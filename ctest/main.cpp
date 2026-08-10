@@ -58,7 +58,7 @@ int main(int args, char* argv[]){
     vector<msstSm> msstv_dec(bayer_img_info.w * bayer_img_info.h /4, msst());
     const size_t input_pixels = static_cast<size_t>(bayer_img_info.w) * bayer_img_info.h;
     if(!loadbayerimg(cfaorg, bayer_img_info.filename, bayer_img_info.bpp,
-                     bayer_img_info.csi2_style, input_pixels)){
+                     bayer_img_info.csi2_style, 0 )){
         cout << "Failed to load Bayer image: " << bayer_img_info.filename << endl;
         return -1;
     }else{
@@ -66,7 +66,7 @@ int main(int args, char* argv[]){
         cout << "Input packing: " << (bayer_img_info.csi2_style ? "CSI-2" : "compact") << endl;
         cout << "Image Total Size: " << bayer_img_info.w * bayer_img_info.h << endl;
         cout << "cfaimg's size: " << cfaorg.size() << endl;
-        size_t cfaorg_size = cfaorg.size();
+        size_t cfaorg_size = input_pixels;
         for(size_t i=0; i < cfaorg_size; i++){
             cfaimg[i] = cfaorg[i];
         }
@@ -110,11 +110,22 @@ int main(int args, char* argv[]){
         savebayertxt(cfaproc, "cfaproc.txt", bayer_info);
     }
     //-------------------------------------------//
+    size_t row_sz = entp.size();
+    size_t rbsz, tsz=0;
+
+    for(size_t k=0; k < row_sz; ++k){
+        rbsz = ((size_t)entp[k][0]);
+        rbsz|= ((size_t)entp[k][1])<< 8;
+        rbsz|= ((size_t)entp[k][2])<<16;
+        rbsz|= ((size_t)entp[k][3])<<24;
+        tsz += rbsz;
+    }
     
     write_dec_cfa(save_info.dec_cfa_fname, cfaproc, bayer_info, save_info.dec_cfa_csi2_style);
-    write_report(save_info.codec_report_fname, bayer_info, process_info, save_info, quant_info, bayer_img_info.filename); 
+    write_report(save_info.codec_report_fname, bayer_info, process_info, save_info, 
+                 quant_info, tsz, bayer_img_info.filename); 
 
-    size_t sz = cfaorg.size();
+    size_t sz = cfaproc.size();
     int32_t cnt=0;
     for(size_t i=0; i < sz; i++){
         if(cfaorg[i] != cfaproc[i]){
