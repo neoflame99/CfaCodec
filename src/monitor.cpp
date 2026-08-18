@@ -1,5 +1,68 @@
 #include "monitor.h"
 
+namespace {
+
+static void write_le16(FILE* fp, uint16_t value){
+    uint8_t bytes[2] = {
+        static_cast<uint8_t>(value & 0xFF),
+        static_cast<uint8_t>((value >> 8) & 0xFF)
+    };
+    fwrite(bytes, sizeof(uint8_t), 2, fp);
+}
+
+static void write_le32(FILE* fp, uint32_t value){
+    uint8_t bytes[4] = {
+        static_cast<uint8_t>( value        & 0xFF),
+        static_cast<uint8_t>((value >> 8 ) & 0xFF),
+        static_cast<uint8_t>((value >> 16) & 0xFF),
+        static_cast<uint8_t>((value >> 24) & 0xFF)
+    };
+    fwrite(bytes, sizeof(uint8_t), 4, fp);
+}
+
+static uint8_t cfapix_upper8(cfapix value, int32_t bpp){
+    if(value < 0){
+        value = 0;
+    }
+
+    const uint32_t raw = static_cast<uint32_t>(value);
+    if(bpp > 8){
+        return static_cast<uint8_t>(raw >> (bpp - 8));
+    }
+    if(bpp > 0){
+        return static_cast<uint8_t>(raw << (8 - bpp));
+    }
+    return 0;
+}
+
+static int bayer_channel(int32_t pattern, int32_t y, int32_t x){
+    const bool odd_y = (y & 1) != 0;
+    const bool odd_x = (x & 1) != 0;
+
+    switch(pattern){
+        case 0: // rggb
+            if(!odd_y && !odd_x) return 0;
+            if( odd_y &&  odd_x) return 2;
+            return 1;
+        case 1: // grbg
+            if(!odd_y &&  odd_x) return 0;
+            if( odd_y && !odd_x) return 2;
+            return 1;
+        case 2: // gbrg
+            if( odd_y && !odd_x) return 0;
+            if(!odd_y &&  odd_x) return 2;
+            return 1;
+        case 3: // bggr
+            if( odd_y &&  odd_x) return 0;
+            if(!odd_y && !odd_x) return 2;
+            return 1;
+        default:
+            return 1;
+    }
+}
+
+} // namespace
+
 void savebayertxt(const vector<cfapix> &cfaimg, const string& filename, const BayerInfo& bayer_info){
     FILE *fp;
     fp = fopen(filename.c_str(), "w");
@@ -21,6 +84,73 @@ void savebayertxt(const vector<cfapix> &cfaimg, const string& filename, const Ba
         }
         fprintf(fp, "\n");
     }
+    fclose(fp);
+}
+
+void savebayerbmp(const vector<cfapix> &cfaimg, const string& filename, const BayerInfo& bayer_info){
+    const size_t numpixels = cfaimg.size();
+    const size_t expected_pixels = static_cast<size_t>(bayer_info.w) * static_cast<size_t>(bayer_info.h);
+    if(expected_pixels != numpixels){
+        fprintf(stderr, "savebayerbmp: image size mismatch, w*h = %zu, numpixels = %zu\n", expected_pixels, numpixels);
+        return;
+    }
+    if(bayer_info.w <= 0 || bayer_info.h <= 0){
+        fprintf(stderr, "savebayerbmp: invalid image size, w = %d, h = %d\n", bayer_info.w, bayer_info.h);
+        return;
+    }
+
+    FILE *fp = fopen(filename.c_str(), "wb");
+    if(fp == nullptr){
+        fprintf(stderr, "savebayerbmp: file open error: %s\n", filename.c_str());
+        return;
+    }
+
+    const uint32_t width = static_cast<uint32_t>(bayer_info.w);
+    const uint32_t height = static_cast<uint32_t>(bayer_info.h);
+    const uint32_t row_bytes = width * 3;
+    const uint32_t padding = (4 - (row_bytes % 4)) % 4;
+    const uint32_t stride = row_bytes + padding;
+    const uint32_t pixel_bytes = stride * height;
+    const uint32_t header_bytes = 54;
+    const uint32_t file_bytes = header_bytes + pixel_bytes;
+
+    fwrite("BM", sizeof(char), 2, fp);
+    write_le32(fp, file_bytes);
+    write_le16(fp, 0);
+    write_le16(fp, 0);
+    write_le32(fp, header_bytes);
+
+    write_le32(fp, 40);
+    write_le32(fp, width);
+    write_le32(fp, height);
+    write_le16(fp, 1);
+    write_le16(fp, 24);
+    write_le32(fp, 0);
+    write_le32(fp, pixel_bytes);
+    write_le32(fp, 2835);
+    write_le32(fp, 2835);
+    write_le32(fp, 0);
+    write_le32(fp, 0);
+
+    const uint8_t pad[3] = {0, 0, 0};
+    for(int32_t y = bayer_info.h - 1; y >= 0; --y){
+        for(int32_t x = 0; x < bayer_info.w; ++x){
+            const size_t index = static_cast<size_t>(y) * static_cast<size_t>(bayer_info.w) + static_cast<size_t>(x);
+            const uint8_t value = cfapix_upper8(cfaimg[index], bayer_info.bpp);
+            uint8_t bgr[3] = {0, 0, 0};
+            const int channel = bayer_channel(bayer_info.cfa_pat, y, x);
+            if(channel == 0){
+                bgr[2] = value;
+            }else if(channel == 1){
+                bgr[1] = value;
+            }else{
+                bgr[0] = value;
+            }
+            fwrite(bgr, sizeof(uint8_t), 3, fp);
+        }
+        fwrite(pad, sizeof(uint8_t), padding, fp);
+    }
+
     fclose(fp);
 }
 

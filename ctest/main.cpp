@@ -58,7 +58,8 @@ int main(int args, char* argv[]){
     vector<msstSm> msstv_dec(bayer_img_info.w * bayer_img_info.h /4, msst());
     const size_t input_pixels = static_cast<size_t>(bayer_img_info.w) * bayer_img_info.h;
     if(!loadbayerimg(cfaorg, bayer_img_info.filename, bayer_img_info.bpp,
-                     bayer_img_info.csi2_style, 0 )){
+                     bayer_img_info.csi2_style, input_pixels,
+                     bayer_img_info.excess_bytes_as_offset)){
         cout << "Failed to load Bayer image: " << bayer_img_info.filename << endl;
         return -1;
     }else{
@@ -80,7 +81,8 @@ int main(int args, char* argv[]){
         entp.push_back(rRow);
     }
 
-
+ 
+    //savebayerbmp(cfaimg, "cfaimg.bmp", bayer_info);
     //=========== Encoding ======================//
     bayer_fdwt(msstv_enc, cfaimg, bayer_info, process_info, quant_info);
     enc_entropy(entp, msstv_enc, msst_info, process_info, quant_info);

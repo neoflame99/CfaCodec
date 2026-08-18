@@ -232,7 +232,8 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                 scgcd= cgscnt>=mx ? mx : cgscnt;
                 scocd= coscnt>=mx ? mx : coscnt;
                 //ybitCnt->signs->4 mY->dgbitCnt->signs->4 mDg->
-                bcw = l > 1 /* c < hwidth */ ? pbcw : pbcw-1;
+                //bcw = l > 1 /* c < hwidth */ ? pbcw : pbcw-1;
+                bcw = pbcw;
                 fillbits(rRow, pos, bp, ybcnt, bcw  );
                 fillbits(rRow, pos, bp, sycd , sgpcd);
                 for(int32_t s=k; s < k+ngrp; ++s){
@@ -288,7 +289,7 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
         #endif
         uint32_t p2=0, bp2=0;
         fillbits(rRow, p2, bp2, pos, 32);
-        if(r < 2){
+        if(r < 2 || r == 268){
             fprintf(stdout, "row %d size: %d \n", r, getRowCmpSize(rRow));
         }
         tsz += (pos-4); 
@@ -357,7 +358,8 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
         bp = 0;
         rsz = getRowCmpSize(rRow)+4;
         for(int32_t c=0; pos < rsz; k+=ngrp, c+=ngrp){
-            bcw = c < hwidth? pbcw : pbcw-1;
+            //bcw = c < hwidth? pbcw : pbcw-1;
+            bcw = pbcw ;
             retrv(rRow, pos, bp, ybcnt, bcw  );
             ybcnt++; 
             retrv(rRow, pos, bp, sycd , sgpcd);
@@ -454,7 +456,7 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
         fprintf(fp2,"\n");
         #endif
         if(k-k2 != msst_info.w){
-            fprintf(stdout,"Row Size: %d\n", k-k2);
+            fprintf(stdout,"%d Row Size: %d\n", r, k-k2);
             fprintf(stdout, "<-- width not matching\n");
         }
         k2 = k;

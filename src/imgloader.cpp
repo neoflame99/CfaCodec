@@ -35,6 +35,30 @@ bool get_expected_size(size_t pixels, int bpp, bool csi2_style, size_t& bytes)
     return true;
 }
 
+bool trim_to_expected_payload(vector<uint8_t>& input, size_t expected_bytes,
+                              bool excess_bytes_as_offset, const char* packing_name)
+{
+    if(input.size() < expected_bytes){
+        fprintf(stderr, "loadbayerimg: input size mismatch for %s: expected at least %zu bytes, got %zu bytes\n",
+                packing_name, expected_bytes, input.size());
+        return false;
+    }
+
+    if(input.size() == expected_bytes){
+        return true;
+    }
+
+    const size_t extra_bytes = input.size() - expected_bytes;
+    const size_t src_offset = excess_bytes_as_offset ? extra_bytes : 0;
+    vector<uint8_t> payload(input.begin() + static_cast<std::ptrdiff_t>(src_offset),
+                            input.begin() + static_cast<std::ptrdiff_t>(src_offset + expected_bytes));
+    input.swap(payload);
+    fprintf(stderr, "loadbayerimg: input has %zu extra bytes; %s\n",
+            extra_bytes,
+            excess_bytes_as_offset ? "using them as a front offset" : "discarding them from the tail");
+    return true;
+}
+
 bool unpack_compact(vector<cfapix>& pixels, const vector<uint8_t>& input, int bpp, size_t count)
 {
     const uint32_t mask = (1U << bpp) - 1U;
@@ -100,7 +124,7 @@ bool unpack_csi2(vector<cfapix>& pixels, const vector<uint8_t>& input, int bpp)
 } // namespace
 
 bool loadbayerimg(vector<cfapix>& cfaimg, const string& filename, int bpp,
-                  bool csi2_style, size_t expected_pixels)
+                  bool csi2_style, size_t expected_pixels, bool excess_bytes_as_offset)
 {
     cfaimg.clear();
     if(!is_supported_bpp(bpp)){
@@ -131,18 +155,19 @@ bool loadbayerimg(vector<cfapix>& cfaimg, const string& filename, int bpp,
     fclose(fp);
 
     size_t pixel_count = expected_pixels;
+    size_t expected_bytes = 0;
     if(expected_pixels != 0){
-        size_t expected_bytes = 0;
         if(!get_expected_size(expected_pixels, bpp, csi2_style, expected_bytes)){
             fprintf(stderr, "loadbayerimg: CSI-2 RAW%d needs a pixel count that is a multiple of its packing group\n", bpp);
             return false;
         }
-        if(input.size() != expected_bytes){
-            fprintf(stderr, "loadbayerimg: input size mismatch for %s: expected %zu bytes, got %zu bytes\n",
-                    csi2_style ? "CSI-2" : "compact", expected_bytes, input.size());
+        if(!trim_to_expected_payload(input, expected_bytes, excess_bytes_as_offset,
+                                     csi2_style ? "CSI-2" : "compact")){
             return false;
         }
     }else if(csi2_style){
+        // Without expected_pixels there is no known payload size, so there is
+        // no reliable way to distinguish a leading offset from valid payload.
         size_t pixels_per_group = 0;
         size_t bytes_per_group = 0;
         get_csi2_group_size(bpp, pixels_per_group, bytes_per_group);
@@ -152,6 +177,7 @@ bool loadbayerimg(vector<cfapix>& cfaimg, const string& filename, int bpp,
         }
         pixel_count = (input.size() / bytes_per_group) * pixels_per_group;
     }else{
+        // Automatic compact-size inference treats all readable bytes as payload.
         pixel_count = (input.size() * 8) / static_cast<size_t>(bpp);
     }
 

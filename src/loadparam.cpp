@@ -71,6 +71,7 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
 
     BayerImgInfo parsed_info;
     parsed_info.csi2_style = false;
+    parsed_info.excess_bytes_as_offset = true;
     QuantInfo parsed_quant_info;
     parsed_quant_info.Qp = 5;
     bool gb_specified[MNB] = {};
@@ -136,6 +137,8 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
             }
         }else if(key == "bayer_img_csi2_style"){
             parsed_info.csi2_style = (value_l == "true" || value_l == "1");
+        }else if(key == "bayer_img_excess_bytes_as_offset"){
+            parsed_info.excess_bytes_as_offset = (value_l == "true" || value_l == "1");
         }else if(key == "bitstream_filename"){
             save_info.bitstream_fname = value;
         }else if(key == "codec_report_filename"){

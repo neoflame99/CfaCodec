@@ -7,6 +7,7 @@
 using namespace std;
 
 void savebayertxt(const vector<cfapix> &cfaimg, const string& filename, const BayerInfo& bayer_info);
+void savebayerbmp(const vector<cfapix> &cfaimg, const string& filename, const BayerInfo& bayer_info);
 void dumpmsst(const vector<msst> &msstv, const string& filename, const MsstInfo& msst_info);
 void dumpmsst(const vector<msstSm> &msstv, const string& filename, const MsstInfo& msst_info);
 void write_bitstream(const vector<vector<uint8_t>>& entp, const string& filename);
