@@ -1,6 +1,6 @@
 #include "msst.h"
 
-void fmsst(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
+static inline void fmsst(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
     const BayerInfo& bayer_info, const ProcessInfo& proc_info){
     //cfa_pat:
     //0: rg1/g2b, 1: g1r/bg2, 2: g2b/rg1, 3: bg2/g1r
@@ -61,7 +61,7 @@ void fmsst(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& s
     }
 }
 
-void imsst(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
+static inline void imsst(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& sp,
          const BayerInfo& bayer_info, const ProcessInfo& proc_info){
     //cfa_pat:
     //0: rg1/g2b, 1: g1r/bg2, 2: g2b/rg1, 3: bg2/g1r
@@ -125,6 +125,34 @@ void imsst(vector<cfapix>& dst, int32_t& dp, const vector<msst>& src, int32_t& s
         }
     }
 }
+static void sat(vector<cfapix>& dst, const uint32_t mxv){
+    for(size_t k=0; k < dst.size(); ++k){
+        if(dst[k] < 0){
+            dst[k] = 0;
+        }else if(dst[k] > mxv){
+            dst[k] = mxv;
+        }
+    }
+}
+void MSST::enc_msst(vector<msst>& dst, const vector<cfapix>& src){
+    int32_t dp = 0, sp = 0;
+    for(int32_t h = 0; h < bayer_info.h; h+=2){
+        fmsst(dst, dp, src, sp, bayer_info, proc_info);
+        sp += bayer_info.w*2;
+    }
+    cout << "bayer_fdwt, fmsst: dp = " << dp << ", sp = " << sp << endl;
+}
+void MSST::dec_msst(vector<cfapix>& dst, const vector<msst>& src){
+    int32_t dp = 0, sp = 0;
+    for(int32_t h = 0; h < bayer_info.h; h+=2){
+        imsst(dst, dp, src, sp, bayer_info, proc_info);
+        dp += bayer_info.w*2;
+    }
+    uint32_t mxv = (1U << bayer_info.bpp) - 1;
+    sat(dst, mxv);
+    cout << "bayer_idwt, imsst: dp = " << dp << ", sp = " << sp << endl;
+}
+
 void fycc(vector<msst>& dst, int32_t& dp, const vector<cfapix>& src, int32_t& sp,
     const BayerInfo& bayer_info){
     //cfa_pat:

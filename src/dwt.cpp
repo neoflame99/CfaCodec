@@ -1,6 +1,6 @@
 #include "dwt.h"
 
-void fdwt53(vector<msst>& dst, int32_t S, int32_t N ){
+static void fdwt53(vector<msst>& dst, int32_t S, int32_t N ){
     // in-place 5/3 DWT transform
     int32_t hN = N/2;
     int32_t hN_r = hN + (N & 0x1);
@@ -43,7 +43,7 @@ void fdwt53(vector<msst>& dst, int32_t S, int32_t N ){
     }
    #endif
 }
-void idwt53(vector<msst>& dst, int32_t S, int32_t N ){
+static void idwt53(vector<msst>& dst, int32_t S, int32_t N ){
     // in-place 5/3 inverse DWT transform
     int32_t hN = N/2;
     int32_t hN_r = hN + (N & 0x1);
@@ -74,4 +74,26 @@ void idwt53(vector<msst>& dst, int32_t S, int32_t N ){
         fprintf(stderr, "idwt Y of dst[%4d]: %6d, %6d, %6d, %6d \n", 0, dst[0].Y, dst[1].Y, dst[2].Y, dst[3].Y);
     }
    #endif
+}
+
+void DWT::enc_dwt53(vector<msst>& dst ){
+    int32_t S, N;
+    for(int32_t lv =0 ; lv < proc_info.dwt_lv; lv++){
+        N = msst_info.w >> lv;
+        for(int32_t h = 0; h < msst_info.h; h++){
+            S = h * msst_info.w;
+            fdwt53(dst, S, N);
+        }
+    }
+}
+
+void DWT::dec_dwt53(vector<msst>& dst ){
+    int32_t S, N;
+    for(int32_t lv = proc_info.dwt_lv-1; lv >= 0; --lv){
+        N = msst_info.w >> lv;
+        for(int32_t h = 0; h < msst_info.h; h++){
+            S = h * msst_info.w;
+            idwt53(dst, S, N);
+        }
+    }
 }

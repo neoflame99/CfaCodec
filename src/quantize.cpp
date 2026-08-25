@@ -44,7 +44,7 @@ static inline void iquant(vector<msstSm>& msstv, const int32_t S, const int32_t 
     // truncation bits and quantization step to be determined 
 }
 
-void quant_msstv(vector<msstSm>& msstv, const MsstInfo& msst_info, const int32_t dwt_lv, const QuantInfo& quant_info){
+void QUANT::fquant_msstv(vector<msstSm>& msstv){
     int32_t N, S, B, O;
     O = 0;
     for(int32_t m=0; m < msst_info.h; ++m, O+= msst_info.w){
@@ -69,7 +69,7 @@ void quant_msstv(vector<msstSm>& msstv, const MsstInfo& msst_info, const int32_t
         // B=2: S = 0
     }
 }
-void iquant_msstv(vector<msstSm>& msstv, const MsstInfo& msst_info, const int32_t dwt_lv, const QuantInfo& quant_info){
+void QUANT::iquant_msstv(vector<msstSm>& msstv){
     int32_t N, S, B, O;
     O = 0;
     for(int32_t m=0; m < msst_info.h; ++m, O+= msst_info.w){
