@@ -1,45 +1,66 @@
 #include "entropy.h"
 
 struct GR{
-    uint8_t q;
-    uint8_t r;
+    uint32_t q;
+    uint32_t r;
     GR():q(0), r(0){}
 };
 
-static inline int8_t signed_qbit(uint8_t a){
-    int8_t b = a & 0xf;
-    int8_t s = (a & 0x8)>>3;
-    for(int k=4; k < 8; ++k){
-         b |= s << k;
-    }
-    return b;
+static inline void Conv_golombrice(GR& gr, int32_t s,const uint8_t K){
+    gr.q = s >> K;
+    gr.r = s &((1U << K)-1);
 }
-static inline uint8_t fzigzag(int8_t a){
-    uint8_t b;
-    b = (a < 0)? (-a<<1)-1 : a << 1;
-    return b;
+static inline void Revr_golombrice(int32_t& s, const GR& gr, const uint8_t K){
+    s = gr.q << K;
+    s = s | gr.r;
 }
-static inline int8_t izigzag(uint8_t a){
-    int8_t b;
-    b = ( a &0x1)? -((a+1)>>1) : a >> 1;
-    return b;
-}
-static inline void enc_gs_golombrice(GR& gr,const int8_t s,const uint8_t K){
-    uint8_t zs = fzigzag(s);
-    gr.q = zs >> K;
-    gr.r = zs &((1U << K)-1);
-}
-static inline void dec_gs_golombrice(int8_t& s, const GR& gr, const uint8_t K){
-    uint8_t q, d;
-    q = gr.q << K;
-    d = q | gr.r;
-    s = izigzag(d);
-}
-static inline void extract_gr(GR& gr, const vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
-    uint8_t d = bstm[pos];
-    d >>= bp;
+static inline void enc_gmrice(int32_t dat, vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
+    GR gr;
+    Conv_golombrice(gr, dat, K);
     uint8_t q = 0, r=0;
     uint8_t b;
+    uint8_t d = bstm[pos];
+    // put q
+    for(int n=0; n < gr.q; ++n){
+        d |= 0x1 << bp; 
+        bp++;
+        if(bp >= 8){
+            bstm[pos] = d;
+            ++pos;
+            bp= 0;
+            d = 0;
+        }
+    }
+    // put 0
+    bp++;
+    if(bp >= 8){
+        bstm[pos] = d;
+        ++pos;
+        bp= 0;
+        d = 0;
+    }
+    // put r
+    for(int k =0; k < K; ++k){
+        d |= (r & 0x1) << k;
+        r >>=1;
+        bp++;
+        if(bp >= 8){
+            bstm[pos] = d;
+            ++pos;
+            bp= 0;
+            d = 0;
+        }
+    }
+    if(bp!=0){
+        bstm[pos] = d;
+    }
+}
+static inline void dec_gmrice(int32_t& dat, const vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
+    GR gr;
+    uint8_t d = bstm[pos];
+    d >>= bp;
+    uint32_t q = 0, r=0;
+    uint32_t b;
     // getting q
     for(;;){
         b = (d & 0x1);
@@ -65,6 +86,9 @@ static inline void extract_gr(GR& gr, const vector<uint8_t>& bstm, uint32_t& pos
             bp= 0;
         }
     }
+    gr.q = q;
+    gr.r = r;
+    Revr_golombrice(dat, gr, K);
 }
 
 static inline void fillbits(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp, uint32_t td, uint32_t blen){
@@ -100,8 +124,8 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
     //--   +----+----+----+----+----+----+----+----+----+
-    //--    <- 4 or 5-bit bcnt    -> <- signs of group->
-    //--     HH band: 4-bit bcnt, others: 5-bit bcnt
+    //--    <- 5-bit bcnt         -> <- signs of group->
+    //--     HH band: 5-bit bcnt, others: 5-bit bcnt
     uint32_t my, mdg, mcg, mco;
     uint32_t ybcnt, dgbcnt, cgbcnt, cobcnt;
     uint32_t ybcnt_cl, dgbcnt_cl, cgbcnt_cl, cobcnt_cl;
@@ -169,14 +193,6 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                 fprintf(fp3, "[k%6d, %2d, %2d, %2d %2d],", k, ssy, ssdg, sscg, ssco);
                 #endif
 
-                //if(k==283728){
-                //    int a=10;
-                //    int myy ; 
-                //    myy = msstv[k].mCo;
-                //    myy = msstv[k+1].mCo;
-                //    myy = msstv[k+2].mCo;
-                //    myy = msstv[k+3].mCo;
-                //}
                 for(int32_t m=0; m < mbc; ++m){
                     if( my == 0) break;
                     my >>= 1;
@@ -231,51 +247,35 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                 sdgcd= dgscnt>=mx ? mx : dgscnt;
                 scgcd= cgscnt>=mx ? mx : cgscnt;
                 scocd= coscnt>=mx ? mx : coscnt;
-                //ybitCnt->signs->4 mY->dgbitCnt->signs->4 mDg->
-                //bcw = l > 1 /* c < hwidth */ ? pbcw : pbcw-1;
+                //ybitCnt->ngrp mY->dgbitCnt->ngrp mDg->
+                //sycd ->ngrp sY->sdg->ngrp sDg->
                 bcw = pbcw;
                 fillbits(rRow, pos, bp, ybcnt, bcw  );
-                fillbits(rRow, pos, bp, sycd , sgpcd);
                 for(int32_t s=k; s < k+ngrp; ++s){
                     fillbits(rRow, pos, bp, msstv[s  ].mY, ybcnt_cl);
                 }
-                //fillbits(rRow, pos, bp, msstv[k  ].mY, ybcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+1].mY, ybcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+2].mY, ybcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+3].mY, ybcnt_cl);
-                putgsbits(rRow, pos, bp, sy  , sycd, ngrp, sgpcd);
 
                 fillbits(rRow, pos, bp, dgbcnt, bcw );
-                fillbits(rRow, pos, bp, sdgcd , sgpcd);
                 for(int32_t s=k; s < k+ngrp; ++s){
                     fillbits(rRow, pos, bp, msstv[s  ].mYdDg, dgbcnt_cl);
                 }
-                //fillbits(rRow, pos, bp, msstv[k  ].mYdDg, dgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+1].mYdDg, dgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+2].mYdDg, dgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+3].mYdDg, dgbcnt_cl);
-                putgsbits(rRow, pos, bp, sdg  , sdgcd, ngrp, sgpcd);
                 
                 fillbits(rRow, pos, bp, cgbcnt, bcw );
-                fillbits(rRow, pos, bp, scgcd , sgpcd);
                 for(int32_t s=k; s < k+ngrp; ++s){
                     fillbits(rRow, pos, bp, msstv[s  ].mCbCg, cgbcnt_cl);
                 }
-                //fillbits(rRow, pos, bp, msstv[k  ].mCbCg, cgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+1].mCbCg, cgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+2].mCbCg, cgbcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+3].mCbCg, cgbcnt_cl);
-                putgsbits(rRow, pos, bp, scg  , scgcd, ngrp, sgpcd);
 
                 fillbits(rRow, pos, bp, cobcnt, bcw );
-                fillbits(rRow, pos, bp, scocd , sgpcd);
                 for(int32_t s=k; s < k+ngrp; ++s){
                     fillbits(rRow, pos, bp, msstv[s  ].mCrCo, cobcnt_cl);
                 }
-                //fillbits(rRow, pos, bp, msstv[k  ].mCrCo, cobcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+1].mCrCo, cobcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+2].mCrCo, cobcnt_cl);
-                //fillbits(rRow, pos, bp, msstv[k+3].mCrCo, cobcnt_cl);
+                fillbits (rRow, pos, bp, sycd , sgpcd);
+                putgsbits(rRow, pos, bp, sy   , sycd , ngrp, sgpcd);
+                fillbits (rRow, pos, bp, sdgcd, sgpcd);
+                putgsbits(rRow, pos, bp, sdg  , sdgcd, ngrp, sgpcd);
+                fillbits (rRow, pos, bp, scgcd, sgpcd);
+                putgsbits(rRow, pos, bp, scg  , scgcd, ngrp, sgpcd);
+                fillbits (rRow, pos, bp, scocd, sgpcd);
                 putgsbits(rRow, pos, bp, sco  , scocd, ngrp, sgpcd);
                 #ifdef _DUMP_
                 fprintf(fp,"[k%6d,pos%4d,yc%2u,dgc%2u,cgc%2d,coc%2d],",k, pos, ybcnt, dgbcnt, cgbcnt, cobcnt);
@@ -362,87 +362,46 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
             bcw = pbcw ;
             retrv(rRow, pos, bp, ybcnt, bcw  );
             ybcnt++; 
-            retrv(rRow, pos, bp, sycd , sgpcd);
             for(int32_t s=k; s < k+ngrp; ++s){
                 retrv(rRow, pos, bp, msstv[s  ].mY, ybcnt);
             }
-            //retrv(rRow, pos, bp, msstv[k  ].mY, ybcnt);
-            //retrv(rRow, pos, bp, msstv[k+1].mY, ybcnt);
-            //retrv(rRow, pos, bp, msstv[k+2].mY, ybcnt);
-            //retrv(rRow, pos, bp, msstv[k+3].mY, ybcnt);
-            //if(k==283728){
-            //    int a=10;
-            //    int myy ; 
-            //    myy = msstv[k].mY;
-            //    myy = msstv[k+1].mY ;
-            //    myy = msstv[k+2].mY ;
-            //    myy = msstv[k+3].mY;
-            //}
+            retrv(rRow, pos, bp, dgbcnt, bcw  );
+            dgbcnt++;
+            for(int32_t s=k; s < k+ngrp; ++s){
+                retrv(rRow, pos, bp, msstv[s  ].mYdDg, dgbcnt);
+            }
+            retrv(rRow, pos, bp, cgbcnt, bcw  );
+            cgbcnt++;
+            for(int32_t s=k; s < k+ngrp; ++s){
+                retrv(rRow, pos, bp, msstv[s  ].mCbCg, cgbcnt);
+            }   
+            retrv(rRow, pos, bp, cobcnt, bcw  );
+            cobcnt++;
+            for(int32_t s=k; s < k+ngrp; ++s){
+                retrv(rRow, pos, bp, msstv[s  ].mCrCo, cobcnt);
+            }
+
+            retrv(rRow, pos, bp, sycd , sgpcd);
             getgsbits(rRow, pos, bp, sy, sycd, ngrp, sgpcd);
             for(int32_t s=k; s < k+ngrp; ++s){
                 msstv[s].sY = sy & 0x1; sy >>= 1;
             }
-            //msstv[k  ].sY = sy & 0x1; sy >>= 1;
-            //msstv[k+1].sY = sy & 0x1; sy >>= 1;
-            //msstv[k+2].sY = sy & 0x1; sy >>= 1;
-            //msstv[k+3].sY = sy & 0x1; 
-
-            retrv(rRow, pos, bp, dgbcnt, bcw  );
-            dgbcnt++;
             retrv(rRow, pos, bp, sdgcd , sgpcd);
-            for(int32_t s=k; s < k+ngrp; ++s){
-                retrv(rRow, pos, bp, msstv[s  ].mYdDg, dgbcnt);
-            }
-            //retrv(rRow, pos, bp, msstv[k  ].mYdDg, dgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+1].mYdDg, dgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+2].mYdDg, dgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+3].mYdDg, dgbcnt);
             getgsbits(rRow, pos, bp, sdg, sdgcd, ngrp, sgpcd);
             for(int32_t s=k; s < k+ngrp; ++s){
                 msstv[s].sYdDg = sdg & 0x1; sdg >>= 1;
             }
-            //msstv[k  ].sYdDg = sdg & 0x1; sdg >>= 1;
-            //msstv[k+1].sYdDg = sdg & 0x1; sdg >>= 1;
-            //msstv[k+2].sYdDg = sdg & 0x1; sdg >>= 1;
-            //msstv[k+3].sYdDg = sdg & 0x1; 
-            
-            retrv(rRow, pos, bp, cgbcnt, bcw  );
-            cgbcnt++;
             retrv(rRow, pos, bp, scgcd , sgpcd);
-            for(int32_t s=k; s < k+ngrp; ++s){
-                retrv(rRow, pos, bp, msstv[s  ].mCbCg, cgbcnt);
-            }   
-            //retrv(rRow, pos, bp, msstv[k  ].mCbCg, cgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+1].mCbCg, cgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+2].mCbCg, cgbcnt);
-            //retrv(rRow, pos, bp, msstv[k+3].mCbCg, cgbcnt);
             getgsbits(rRow, pos, bp, scg, scgcd, ngrp, sgpcd);
             for(int32_t s=k; s < k+ngrp; ++s){
                 msstv[s].sCbCg = scg & 0x1; scg >>= 1;
             }
-            //msstv[k  ].sCbCg = scg & 0x1; scg >>= 1;
-            //msstv[k+1].sCbCg = scg & 0x1; scg >>= 1;
-            //msstv[k+2].sCbCg = scg & 0x1; scg >>= 1;
-            //msstv[k+3].sCbCg = scg & 0x1; 
-
-            retrv(rRow, pos, bp, cobcnt, bcw  );
-            cobcnt++;
             retrv(rRow, pos, bp, scocd , sgpcd);
-            for(int32_t s=k; s < k+ngrp; ++s){
-                retrv(rRow, pos, bp, msstv[s  ].mCrCo, cobcnt);
-            }
-            //retrv(rRow, pos, bp, msstv[k  ].mCrCo, cobcnt);
-            //retrv(rRow, pos, bp, msstv[k+1].mCrCo, cobcnt);
-            //retrv(rRow, pos, bp, msstv[k+2].mCrCo, cobcnt);
-            //retrv(rRow, pos, bp, msstv[k+3].mCrCo, cobcnt);
             getgsbits(rRow, pos, bp, sco, scocd, ngrp, sgpcd);
             for(int32_t s=k; s < k+ngrp; ++s){
                 msstv[s].sCrCo = sco & 0x1; sco >>= 1;
             }
-            //msstv[k  ].sCrCo = sco & 0x1; sco >>= 1;
-            //msstv[k+1].sCrCo = sco & 0x1; sco >>= 1;
-            //msstv[k+2].sCrCo = sco & 0x1; sco >>= 1;
-            //msstv[k+3].sCrCo = sco & 0x1; 
+
 
             //fprintf(stdout," k: %d, ",k);
             #ifdef _DUMP_
@@ -465,5 +424,160 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
     #ifdef _DUMP_
     fclose(fp);
     fclose(fp2);
+    #endif
+}
+
+void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info, 
+    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+{
+    //--   +----+----+----+----+----+----+----+----+----+
+    //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
+    //--   +----+----+----+----+----+----+----+----+----+
+    //--    <- 5-bit bcnt         -> <- signs of group->
+    //--     HH band: 5-bit bcnt, others: 5-bit bcnt
+    uint32_t my, mdg, mcg, mco;
+    uint32_t ybcnt, dgbcnt, cgbcnt, cobcnt;
+    uint32_t ybcnt_cl, dgbcnt_cl, cgbcnt_cl, cobcnt_cl;
+    uint32_t yscnt, dgscnt, cgscnt, coscnt;
+    uint32_t sy, sdg, scg, sco;
+    uint32_t sy2, sdg2, scg2, sco2;
+    uint32_t sycd, sdgcd, scgcd, scocd;
+    int32_t k=0;
+    uint32_t pos, bp;
+    uint32_t tsz=0;
+    int32_t  hwidth = msst_info.w/2;
+    int32_t  tw;
+    uint32_t bcw;
+    #ifdef _DUMP_
+    FILE* fp  = fopen("tmp/enc_ent.txt", "w");
+    FILE* fp2 = fopen("tmp/enc_in.txt", "w");
+    FILE* fp3 = fopen("tmp/qbit.txt", "w");
+    fprintf(fp3,"## [sy, sdg, scg, sco]\n");
+    #endif
+
+    uint32_t ngrp = proc_info.ngrp;
+    uint32_t pbcw = proc_info.bcw;
+    uint32_t mbc  = proc_info.mbc;
+    uint32_t dwtl = proc_info.dwt_lv;
+    uint32_t sgpcd = proc_info.sgpcd;
+    uint32_t mx = (1U<<sgpcd)-1;
+
+    for(int32_t r=0; r < msst_info.h; ++r){
+        vector<uint8_t>& rRow = bitv[r];
+        pos = 4;
+        bp  = 0;
+        //for(int32_t c=0; c < msst_info.w; c+=ngrp, k+=ngrp){
+        for(int32_t l=proc_info.dwt_lv+1; l > 0; --l){
+            int32_t sl = l > proc_info.dwt_lv ? proc_info.dwt_lv : l; 
+            tw = msst_info.w >> sl;
+            for(int32_t c=0; c < tw; c+=ngrp, k+=ngrp){
+                ybcnt=0 ; yscnt = 0;
+                dgbcnt=0; dgscnt= 0;
+                cgbcnt=0; cgscnt= 0;
+                cobcnt=0; coscnt= 0;
+
+                my = msstv[k].mY   ; 
+                mdg= msstv[k].mYdDg; 
+                mco= msstv[k].mCrCo; 
+                mcg= msstv[k].mCbCg; 
+                sy = int(msstv[k].sY)   ; 
+                sdg= int(msstv[k].sYdDg); 
+                sco= int(msstv[k].sCrCo); 
+                scg= int(msstv[k].sCbCg); 
+                for(int32_t s=k+1, ss=1; ss < ngrp; ++ss, ++s){
+                   sy |= int(msstv[s].sY)   << ss; //int(msstv[k].sY) | (int(msstv[k+1].sY) << 1) | (int(msstv[k+2].sY)<<2) | (int(msstv[k+3].sY)<<3);
+                   sdg|= int(msstv[s].sYdDg)<< ss; //int(msstv[k].sYdDg) | (int(msstv[k+1].sYdDg) << 1) | (int(msstv[k+2].sYdDg)<<2) | (int(msstv[k+3].sYdDg)<<3);
+                   sco|= int(msstv[s].sCrCo)<< ss; //int(msstv[k].sCrCo) | (int(msstv[k+1].sCrCo) << 1) | (int(msstv[k+2].sCrCo)<<2) | (int(msstv[k+3].sCrCo)<<3);
+                   scg|= int(msstv[s].sCbCg)<< ss; //int(msstv[k].sCbCg) | (int(msstv[k+1].sCbCg) << 1) | (int(msstv[k+2].sCbCg)<<2) | (int(msstv[k+3].sCbCg)<<3);
+                }
+                sy2 = sy; sdg2 = sdg; scg2 = scg; sco2 = sco;
+                #ifdef _DUMP_
+                fprintf(fp2,"[k%4d, mY: %6d, %6d, %6d, %6d, sY: %1d, %1d, %1d, %1d]\n",k, msstv[k].mY, msstv[k+1].mY, msstv[k+2].mY, msstv[k+3].mY, msstv[k].sY, msstv[k+1].sY, msstv[k+2].sY, msstv[k+3].sY);
+                ssy = signed_qbit(sy); ssdg = signed_qbit(sdg); sscg = signed_qbit(scg); ssco = signed_qbit(sco);
+                int8_t ssy, ssdg, sscg, ssco;
+                fprintf(fp3, "[k%6d, %2d, %2d, %2d %2d],", k, ssy, ssdg, sscg, ssco);
+                #endif
+
+                for(int32_t m=0; m < ngrp; ++m){
+                    if( sy2 == 0) break;
+                    sy2 >>= 1;
+                    yscnt++;
+                }
+                for(int32_t m=0; m < ngrp; ++m){
+                    if( sdg2 == 0) break;
+                    sdg2 >>= 1;
+                    dgscnt++;
+                }
+                for(int32_t m=0; m < ngrp; ++m){
+                    if( scg2 == 0) break;
+                    scg2 >>= 1;
+                    cgscnt++;
+                }
+                for(int32_t m=0; m < ngrp; ++m){
+                    if( sco2 == 0) break;
+                    sco2 >>= 1;
+                    coscnt++;
+                }
+
+                sycd = yscnt >=mx ? mx : yscnt;
+                sdgcd= dgscnt>=mx ? mx : dgscnt;
+                scgcd= cgscnt>=mx ? mx : cgscnt;
+                scocd= coscnt>=mx ? mx : coscnt;
+                //ybitCnt->signs->ngrp mY->dgbitCnt->signs->ngrp mDg->
+                //ngrp mY -> ngrp mDg -> ngrp mCg -> ngrp mCo ->
+                //signs mY -> signs mDg -> signs mCg -> signs mCo
+                bcw = pbcw;
+
+                enc_gmrice(msstv[k].mY, rRow, pos, bp, ybcnt);
+
+                fillbits(rRow, pos, bp, ybcnt, bcw  );
+                fillbits(rRow, pos, bp, sycd , sgpcd);
+                for(int32_t s=k; s < k+ngrp; ++s){
+                    fillbits(rRow, pos, bp, msstv[s  ].mY, ybcnt_cl);
+                }
+                putgsbits(rRow, pos, bp, sy  , sycd, ngrp, sgpcd);
+
+                fillbits(rRow, pos, bp, dgbcnt, bcw );
+                fillbits(rRow, pos, bp, sdgcd , sgpcd);
+                for(int32_t s=k; s < k+ngrp; ++s){
+                    fillbits(rRow, pos, bp, msstv[s  ].mYdDg, dgbcnt_cl);
+                }
+                putgsbits(rRow, pos, bp, sdg  , sdgcd, ngrp, sgpcd);
+                
+                fillbits(rRow, pos, bp, cgbcnt, bcw );
+                fillbits(rRow, pos, bp, scgcd , sgpcd);
+                for(int32_t s=k; s < k+ngrp; ++s){
+                    fillbits(rRow, pos, bp, msstv[s  ].mCbCg, cgbcnt_cl);
+                }
+                putgsbits(rRow, pos, bp, scg  , scgcd, ngrp, sgpcd);
+
+                fillbits(rRow, pos, bp, cobcnt, bcw );
+                fillbits(rRow, pos, bp, scocd , sgpcd);
+                for(int32_t s=k; s < k+ngrp; ++s){
+                    fillbits(rRow, pos, bp, msstv[s  ].mCrCo, cobcnt_cl);
+                }
+                putgsbits(rRow, pos, bp, sco  , scocd, ngrp, sgpcd);
+                #ifdef _DUMP_
+                fprintf(fp,"[k%6d,pos%4d,yc%2u,dgc%2u,cgc%2d,coc%2d],",k, pos, ybcnt, dgbcnt, cgbcnt, cobcnt);
+                #endif
+            }
+        }
+        #ifdef _DUMP_
+        fprintf(fp ,"\n");
+        fprintf(fp2,"\n");
+        fprintf(fp3,"\n");
+        #endif
+        uint32_t p2=0, bp2=0;
+        fillbits(rRow, p2, bp2, pos, 32);
+        if(r < 2 || r == 268){
+            fprintf(stdout, "row %d size: %d \n", r, getRowCmpSize(rRow));
+        }
+        tsz += (pos-4); 
+    }
+    fprintf(stdout, "Total Compressed size: %u\n", tsz);
+    #ifdef _DUMP_
+    fclose(fp );
+    fclose(fp2);
+    fclose(fp3);
     #endif
 }
