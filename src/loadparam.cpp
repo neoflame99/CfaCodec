@@ -92,7 +92,7 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
 
     std::string line;
     while(std::getline(ifs, line)){
-        const size_t comment_pos = line.find("##");
+        const size_t comment_pos = line.find('#');
         if(comment_pos != std::string::npos){
             line = line.substr(0, comment_pos);
         }
