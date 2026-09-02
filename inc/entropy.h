@@ -3,6 +3,7 @@
 #ifndef _ENTROPY_H_
 #define _ENTROPY_H_
 
+#define NSGRP 8
 using namespace std;
 
 inline uint32_t getRowCmpSize(vector<uint8_t>& rRow){
