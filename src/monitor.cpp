@@ -1,4 +1,5 @@
 #include "monitor.h"
+#include "entropy.h"
 
 namespace {
 
@@ -193,10 +194,10 @@ void write_bitstream(const vector<vector<uint8_t>>& entp, const string& filename
     size_t h = entp.size();
     size_t w;
     for(size_t m=0; m < h; m++){
-        w = entp[m][0];
-        w|= entp[m][1]<< 8;
-        w|= entp[m][2]<<16;
-        w|= entp[m][3]<<24;
+        w = 0;
+        for(int k=0; k < SZSZ; ++k){
+            w |= entp[m][k] << (k*8);
+        }
         for(size_t n=0; n < w+4; n++){
             fwrite(&entp[m][n], sizeof(uint8_t), 1, fp);
         }
