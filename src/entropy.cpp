@@ -64,7 +64,7 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
 
     for(int32_t r=0; r < msst_info.h; ++r){
         vector<uint8_t>& rRow = bitv[r];
-        pos = 4;
+        pos = SZSZ;
         bp  = 0;
         //for(int32_t c=0; c < msst_info.w; c+=ngrp, k+=ngrp){
         for(int32_t l=proc_info.dwt_lv+1; l > 0; --l){
@@ -101,47 +101,67 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                 int8_t ssy, ssdg, sscg, ssco;
                 fprintf(fp3, "[k%6d, %2d, %2d, %2d %2d],", k, ssy, ssdg, sscg, ssco);
                 #endif
+                for(int32_t m=0; m < mbc; ++m){
+                    ybcnt += int(my  > 0);
+                    dgbcnt+= int(mdg > 0);
+                    cgbcnt+= int(mcg > 0);
+                    cobcnt+= int(mco > 0);
 
-                for(int32_t m=0; m < mbc; ++m){
-                    if( my == 0) break;
-                    my >>= 1;
-                    ybcnt++;
-                }
-                for(int32_t m=0; m < mbc; ++m){
-                    if( mdg == 0) break;
+                    my  >>= 1;
                     mdg >>= 1;
-                    dgbcnt++;
-                }
-                for(int32_t m=0; m < mbc; ++m){
-                    if( mcg == 0) break;
                     mcg >>= 1;
-                    cgbcnt++;
-                }
-                for(int32_t m=0; m < mbc; ++m){
-                    if( mco == 0) break;
                     mco >>= 1;
-                    cobcnt++;
                 }
+                //for(int32_t m=0; m < mbc; ++m){
+                //    if( my == 0) break;
+                //    my >>= 1;
+                //    ybcnt++;
+                //}
+                //for(int32_t m=0; m < mbc; ++m){
+                //    if( mdg == 0) break;
+                //    mdg >>= 1;
+                //    dgbcnt++;
+                //}
+                //for(int32_t m=0; m < mbc; ++m){
+                //    if( mcg == 0) break;
+                //    mcg >>= 1;
+                //    cgbcnt++;
+                //}
+                //for(int32_t m=0; m < mbc; ++m){
+                //    if( mco == 0) break;
+                //    mco >>= 1;
+                //    cobcnt++;
+                //}
                 for(int32_t m=0; m < ngrp; ++m){
-                    if( sy2 == 0) break;
-                    sy2 >>= 1;
-                    yscnt++;
-                }
-                for(int32_t m=0; m < ngrp; ++m){
-                    if( sdg2 == 0) break;
+                    yscnt +=int(sy2  > 0);
+                    dgscnt+=int(sdg2 > 0);
+                    cgscnt+=int(scg2 > 0);
+                    coscnt+=int(sco2 > 0);
+                    sy2  >>= 1;
                     sdg2 >>= 1;
-                    dgscnt++;
-                }
-                for(int32_t m=0; m < ngrp; ++m){
-                    if( scg2 == 0) break;
                     scg2 >>= 1;
-                    cgscnt++;
-                }
-                for(int32_t m=0; m < ngrp; ++m){
-                    if( sco2 == 0) break;
                     sco2 >>= 1;
-                    coscnt++;
                 }
+                //for(int32_t m=0; m < ngrp; ++m){
+                //    if( sy2 == 0) break;
+                //    sy2 >>= 1;
+                //    yscnt++;
+                //}
+                //for(int32_t m=0; m < ngrp; ++m){
+                //    if( sdg2 == 0) break;
+                //    sdg2 >>= 1;
+                //    dgscnt++;
+                //}
+                //for(int32_t m=0; m < ngrp; ++m){
+                //    if( scg2 == 0) break;
+                //    scg2 >>= 1;
+                //    cgscnt++;
+                //}
+                //for(int32_t m=0; m < ngrp; ++m){
+                //    if( sco2 == 0) break;
+                //    sco2 >>= 1;
+                //    coscnt++;
+                //}                
 
                 ybcnt = ybcnt >= 1 ? ybcnt-1 : 0;
                 dgbcnt= dgbcnt>= 1 ? dgbcnt-1: 0;
@@ -197,13 +217,13 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
         fprintf(fp3,"\n");
         #endif
         uint32_t p2=0, bp2=0;
-        fillbits(rRow, p2, bp2, pos, 32);
+        fillbits(rRow, p2, bp2, pos, 8*SZSZ);
         if(r < 2 || r == 268){
-            fprintf(stdout, "row %d size: %d \n", r, getRowCmpSize(rRow));
+            fprintf(stdout, "row %d size including size info: %d \n", r, getRowCmpSize(rRow));
         }
-        tsz += (pos-4); 
+        tsz += pos; 
     }
-    fprintf(stdout, "Total Compressed size: %u\n", tsz);
+    fprintf(stdout, "Total Compressed size including each row size: %u\n", tsz);
     #ifdef _DUMP_
     fclose(fp );
     fclose(fp2);
@@ -263,9 +283,9 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
 
     for(int32_t r=0; r < msst_info.h; ++r){
         vector<uint8_t>& rRow = bitv[r];
-        pos = 4;
+        pos = SZSZ;
         bp = 0;
-        rsz = getRowCmpSize(rRow)+4;
+        rsz = getRowCmpSize(rRow);
         for(int32_t c=0; pos < rsz; k+=ngrp, c+=ngrp){
             //bcw = c < hwidth? pbcw : pbcw-1;
             bcw = pbcw ;
@@ -311,7 +331,6 @@ void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                 msstv[s].sCrCo = sco & 0x1; sco >>= 1;
             }
 
-
             //fprintf(stdout," k: %d, ",k);
             #ifdef _DUMP_
             fprintf(fp,"[k%6d,pos%4d,yc%2d,dgc%2d,cgc%2d,coc%2d],",k, pos, ybcnt, dgbcnt, cgbcnt, cobcnt);
@@ -342,15 +361,15 @@ struct GR{
     GR():q(0), r(0){}
 };
 
-static inline void Conv_golombrice(GR& gr, int32_t s,const uint8_t K){
+static inline void Conv_golombrice(GR& gr, uint32_t s,const uint8_t K){
     gr.q = s >> K;
     gr.r = s &((1U << K)-1);
 }
-static inline void Revr_golombrice(int32_t& s, const GR& gr, const uint8_t K){
+static inline void Revr_golombrice(uint32_t& s, const GR& gr, const uint8_t K){
     s = gr.q << K;
     s = s | gr.r;
 }
-static inline void enc_gmrice(int32_t dat, vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
+static inline void enc_gmrice(uint32_t dat, vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
     GR gr;
     Conv_golombrice(gr, dat, K);
     uint8_t q = 0, r=0;
@@ -391,7 +410,7 @@ static inline void enc_gmrice(int32_t dat, vector<uint8_t>& bstm, uint32_t& pos,
         bstm[pos] = d;
     }
 }
-static inline void dec_gmrice(int32_t& dat, const vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
+static inline void dec_gmrice(uint32_t& dat, const vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
     GR gr;
     uint8_t d = bstm[pos];
     d >>= bp;
@@ -459,7 +478,7 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
 
     for(int32_t r=0; r < msst_info.h; ++r){
         vector<uint8_t>& rRow = bitv[r];
-        pos = 4;
+        pos = SZSZ;
         bp  = 0;
         //for(int32_t c=0; c < msst_info.w; c+=ngrp, k+=ngrp){
         for(int32_t l=proc_info.dwt_lv+1; l > 0; --l){
@@ -494,7 +513,7 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
                     }
                 }
                 //-- encode with optimum K
-                fillbits(rRow, pos, bp, K-1, 4); // 4-bit K(1~16 -> 0~15)
+                fillbits(rRow, pos, bp, K-1, KBSZ); //KBSZ: 4-bit K(1~16 -> 0~15)
                 for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
                     enc_gmrice(msstv[m].mY   , rRow, pos, bp, K);
                     enc_gmrice(msstv[m].mYdDg, rRow, pos, bp, K);
@@ -556,16 +575,115 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
         fprintf(fp3,"\n");
         #endif
         uint32_t p2=0, bp2=0;
-        fillbits(rRow, p2, bp2, pos, 32);
+        fillbits(rRow, p2, bp2, pos, 8*SZSZ);
         if(r < 2 || r == 268){
             fprintf(stdout, "row %d size: %d \n", r, getRowCmpSize(rRow));
         }
-        tsz += (pos-4); 
+        tsz += pos; 
     }
-    fprintf(stdout, "Total Compressed size: %u\n", tsz);
+    fprintf(stdout, "Total Compressed size including each row size: %u\n", tsz);
     #ifdef _DUMP2_
     fclose(fp );
     fclose(fp2);
     fclose(fp3);
+    #endif
+}
+void dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info,
+    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+{
+    //--   +----+----+----+----+----+----+----+----+----+
+    //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
+    //--   +----+----+----+----+----+----+----+----+----+
+    //--    <- 5-bit bcnt         -> <- signs of group->
+    uint32_t my, mdg, mcg, mco;
+    uint32_t ybcnt, dgbcnt, cgbcnt, cobcnt;
+    uint32_t sy, sdg, scg, sco;
+    uint32_t sycd, sdgcd, scgcd, scocd;
+    int32_t k=0, k2=0;
+    uint32_t pos, bp;
+    int32_t  hwidth = msst_info.w/2;
+    uint32_t bcw;
+    int32_t  tw;
+    #ifdef _DUMP2_
+    FILE* fp  = fopen("tmp/dec_ent.txt", "w");
+    FILE* fp2 = fopen("tmp/dec_out.txt", "w");
+    #endif
+    uint32_t rsz=0;
+
+    uint32_t ngrp = proc_info.ngrp;
+    uint32_t pbcw = proc_info.bcw;
+    uint32_t mbc  = proc_info.mbc;
+    uint32_t dwtl = proc_info.dwt_lv;
+    uint32_t sgpcd = proc_info.sgpcd;
+
+    for(int32_t r=0; r < msst_info.h; ++r){
+        vector<uint8_t>& rRow = bitv[r];
+        pos = SZSZ;
+        bp = 0;
+        rsz = getRowCmpSize(rRow);
+        for(int32_t c=0; pos < rsz; k+=ngrp, c+=ngrp){
+            //--------------------------------------------------------
+            // ngrp mY -> ngrp mDg -> ngrp mCg -> ngrp mCo ->
+            // signs mY -> signs mDg -> signs mCg -> signs mCo
+            //--------------------------------------------------------
+            //-- decode with optimum K
+            uint32_t K;
+            retrv(rRow, pos, bp, K, KBSZ ); //KBSZ: 4-bit K(1~16 -> 0~15)
+            K++;
+            for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
+                dec_gmrice(msstv[m].mY   , rRow, pos, bp, K);
+                dec_gmrice(msstv[m].mYdDg, rRow, pos, bp, K);
+                dec_gmrice(msstv[m].mCbCg, rRow, pos, bp, K);
+                dec_gmrice(msstv[m].mCrCo, rRow, pos, bp, K);
+            }
+
+            assert(ngrp >= NSGRP && ngrp % NSGRP == 0);
+            int32_t iter = ngrp / NSGRP;
+            for(int32_t i=0, m=k; i < iter; ++i, m += NSGRP){
+
+                int32_t E = m+NSGRP;
+                retrv(rRow, pos, bp, sycd , sgpcd);
+                getgsbits(rRow, pos, bp, sy, sycd, NSGRP, sgpcd);
+                for(int32_t s=m; s < E; ++s){
+                    msstv[s].sY = sy & 0x1; sy >>= 1;
+                }
+                retrv(rRow, pos, bp, sdgcd , sgpcd);
+                getgsbits(rRow, pos, bp, sdg, sdgcd, NSGRP, sgpcd);
+                for(int32_t s=m; s < E; ++s){
+                    msstv[s].sYdDg = sdg & 0x1; sdg >>= 1;
+                }
+                retrv(rRow, pos, bp, scgcd , sgpcd);
+                getgsbits(rRow, pos, bp, scg, scgcd, NSGRP, sgpcd);
+                for(int32_t s=m; s < E; ++s){
+                    msstv[s].sCbCg = scg & 0x1; scg >>= 1;
+                }
+                retrv(rRow, pos, bp, scocd , sgpcd);
+                getgsbits(rRow, pos, bp, sco, scocd, NSGRP, sgpcd);
+                for(int32_t s=m; s < E; ++s){
+                    msstv[s].sCrCo = sco & 0x1; sco >>= 1;
+                }
+            }
+
+            //fprintf(stdout," k: %d, ",k);
+            #ifdef _DUMP2_
+            fprintf(fp,"[k%6d,pos%4d,yc%2d,dgc%2d,cgc%2d,coc%2d],",k, pos, ybcnt, dgbcnt, cgbcnt, cobcnt);
+            fprintf(fp2,"[k%4d, mY: %6d, %6d, %6d, %6d, sY: %1d, %1d, %1d, %1d]\n",k, msstv[k].mY, msstv[k+1].mY, msstv[k+2].mY, msstv[k+3].mY, msstv[k].sY, msstv[k+1].sY, msstv[k+2].sY, msstv[k+3].sY);
+            #endif
+        }
+        //fprintf(stdout,"\n");
+        #ifdef _DUMP2_
+        fprintf(fp ,"\n");
+        fprintf(fp2,"\n");
+        #endif
+        if(k-k2 != msst_info.w){
+            fprintf(stdout,"%d Row Size: %d\n", r, k-k2);
+            fprintf(stdout, "<-- width not matching\n");
+        }
+        k2 = k;
+    }
+    fprintf(stdout, "final k: %d\n", k);
+    #ifdef _DUMP2_
+    fclose(fp);
+    fclose(fp2);
     #endif
 }
