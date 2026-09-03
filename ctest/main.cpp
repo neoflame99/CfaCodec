@@ -85,7 +85,8 @@ int main(int args, char* argv[]){
     //savebayerbmp(cfaimg, "cfaimg.bmp", bayer_info);
     //=========== Encoding ======================//
     bayer_fdwt(msstv_enc, cfaimg, bayer_info, process_info, quant_info);
-    enc_entropy(entp, msstv_enc, msst_info, process_info, quant_info);
+    //enc_entropy(entp, msstv_enc, msst_info, process_info, quant_info);
+    enc_entropy_gr(entp, msstv_enc, msst_info, process_info, quant_info);
     //===========================================//
 
     //--------Dump Enc Side----------------------//
@@ -100,7 +101,8 @@ int main(int args, char* argv[]){
     write_bitstream(entp, save_info.bitstream_fname);
 
     //=========== Decoding ======================//
-    dec_entropy(entp, msstv_dec, msst_info, process_info, quant_info);
+    //dec_entropy(entp, msstv_dec, msst_info, process_info, quant_info);
+    dec_entropy_gr(entp, msstv_dec, msst_info, process_info, quant_info);
     bayer_idwt(cfaproc, msstv_dec, bayer_info, process_info, quant_info);
     //===========================================//
 

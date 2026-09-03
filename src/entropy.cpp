@@ -372,7 +372,7 @@ static inline void Revr_golombrice(uint32_t& s, const GR& gr, const uint8_t K){
 static inline void enc_gmrice(uint32_t dat, vector<uint8_t>& bstm, uint32_t& pos, uint32_t& bp, uint8_t K){
     GR gr;
     Conv_golombrice(gr, dat, K);
-    uint8_t q = 0, r=0;
+    uint32_t r = gr.r;
     uint8_t b;
     uint8_t d = bstm[pos];
     // put q
@@ -396,7 +396,7 @@ static inline void enc_gmrice(uint32_t dat, vector<uint8_t>& bstm, uint32_t& pos
     }
     // put r
     for(int k =0; k < K; ++k){
-        d |= (r & 0x1) << k;
+        d |= (r & 0x1) << bp;
         r >>=1;
         bp++;
         if(bp >= 8){
@@ -496,7 +496,7 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
                 uint32_t mnbp  = 0xFFFFFFFF;
                 uint32_t K = 1;
                 for(int32_t t=4; t <=16; ++t){
-                    vector<uint8_t> Kvec(ngrp*4*2, 0);
+                    vector<uint8_t> Kvec(ngrp*4*2*16, 0);
                     uint32_t pos2 = 0;
                     uint32_t bp2 = 0;
                     for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
