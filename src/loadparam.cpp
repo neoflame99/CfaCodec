@@ -189,6 +189,8 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
             }
         }else if(key == "sel_ycc"){
             proc_info.sel_ycc = (value_l == "true" || value_l == "1");
+        }else if(key == "sel_entp"){
+            proc_info.sel_entp = (value_l == "true" || value_l == "1");
         }
     }
 
