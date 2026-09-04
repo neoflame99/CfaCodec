@@ -454,9 +454,6 @@ void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
                 uint32_t mnbp  = 0xFFFFFFFF;
                 uint32_t K = 1;
                 for(int32_t t=4; t <=16; ++t){
-                    vector<uint8_t> Kvec(ngrp*4*2*16, 0);
-                    uint32_t pos2 = 0;
-                    uint32_t bp2 = 0;
                     // bit length of Golomb-Rice code for value v with parameter K is (v>>K)+1+K;
                     // computed analytically instead of actually packing into a fixed-size scratch
                     // buffer, since the unary quotient part is unbounded and can exceed any fixed size.
