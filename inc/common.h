@@ -67,6 +67,7 @@ struct ProcessInfo{
     uint32_t mbc;  // Maximum Bit Count (16+DWTL)
     uint32_t sgpcd;// code length for signs of a group, 1 or 2
     bool     sel_ycc; // false: msst, true: ycc
+    bool     sel_entp;// false: entropy_bc, true: entropy_gr
 };
 
 struct MsstInfo{
