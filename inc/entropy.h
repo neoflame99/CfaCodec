@@ -44,3 +44,5 @@ public:
     void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv) ;
     void dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv) ;
 };
+
+#endif
