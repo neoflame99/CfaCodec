@@ -31,7 +31,8 @@ int main(int args, char* argv[]){
     uint32_t mbc  = MBC;
     uint32_t sgpcd= SGPCD;
     bool sel_ycc  = false;
-    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc };
+    bool sel_entp = false;
+    ProcessInfo process_info{ g, dwt_l, ngrp, bcw, mbc, sgpcd, sel_ycc, sel_entp };
     bool loadparam_result = loadBayerImgInfo(bayer_img_info, save_info, 
                                   process_info, quant_info, param_file);
     if(!loadparam_result){
@@ -81,12 +82,13 @@ int main(int args, char* argv[]){
         entp.push_back(rRow);
     }
 
+    Entropy ent(msst_info, process_info);
+
  
     //savebayerbmp(cfaimg, "cfaimg.bmp", bayer_info);
     //=========== Encoding ======================//
     bayer_fdwt(msstv_enc, cfaimg, bayer_info, process_info, quant_info);
-    //enc_entropy(entp, msstv_enc, msst_info, process_info, quant_info);
-    enc_entropy_gr(entp, msstv_enc, msst_info, process_info, quant_info);
+    ent.enc_entropy(entp, msstv_enc);
     //===========================================//
 
     //--------Dump Enc Side----------------------//
@@ -101,8 +103,7 @@ int main(int args, char* argv[]){
     write_bitstream(entp, save_info.bitstream_fname);
 
     //=========== Decoding ======================//
-    //dec_entropy(entp, msstv_dec, msst_info, process_info, quant_info);
-    dec_entropy_gr(entp, msstv_dec, msst_info, process_info, quant_info);
+    ent.dec_entropy(entp, msstv_dec);
     bayer_idwt(cfaproc, msstv_dec, bayer_info, process_info, quant_info);
     //===========================================//
 
