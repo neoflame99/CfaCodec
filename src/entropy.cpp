@@ -213,7 +213,7 @@ void Entropy::enc_entropy_bc(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
     fclose(fp3);
     #endif
 }
-void Entropy::dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
+void Entropy::dec_entropy_bc(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
 {
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
@@ -313,12 +313,6 @@ void Entropy::dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
     fclose(fp2);
     #endif
 }
-
-struct GR{
-    uint32_t q;
-    uint32_t r;
-    GR():q(0), r(0){}
-};
 
 static inline void Conv_golombrice(GR& gr, uint32_t s,const uint8_t K){
     gr.q = s >> K;
