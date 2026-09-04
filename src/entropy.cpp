@@ -27,8 +27,31 @@ static inline void putgsbits(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp,
         fillbits(rRow, pos, bp, td, blen);
     }
 }
-void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info, 
-    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+static inline void retrv(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp, uint32_t& td, uint32_t blen){
+    uint8_t b = rRow[pos];
+    b >>= bp;
+    td = 0;
+    for(int32_t m=0; m < blen; ++m){
+        td |= (b & 0x1) << m;
+        b >>= 1;
+        bp++;
+        if(bp >=8){
+            ++pos;
+            b = rRow[pos];
+            bp=0;
+        }
+    }
+}
+static inline void getgsbits(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp, uint32_t& td, uint32_t blen, uint32_t sgp, uint32_t sgpcd){
+    uint32_t mx = (1U << sgpcd)-1;
+    if(blen >= mx){
+        retrv(rRow, pos, bp, td, sgp);
+    }else{
+        retrv(rRow, pos, bp, td, blen);
+    }
+}
+
+void Entropy::enc_entropy_bc(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv)
 {
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
@@ -112,26 +135,6 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                     mcg >>= 1;
                     mco >>= 1;
                 }
-                //for(int32_t m=0; m < mbc; ++m){
-                //    if( my == 0) break;
-                //    my >>= 1;
-                //    ybcnt++;
-                //}
-                //for(int32_t m=0; m < mbc; ++m){
-                //    if( mdg == 0) break;
-                //    mdg >>= 1;
-                //    dgbcnt++;
-                //}
-                //for(int32_t m=0; m < mbc; ++m){
-                //    if( mcg == 0) break;
-                //    mcg >>= 1;
-                //    cgbcnt++;
-                //}
-                //for(int32_t m=0; m < mbc; ++m){
-                //    if( mco == 0) break;
-                //    mco >>= 1;
-                //    cobcnt++;
-                //}
                 for(int32_t m=0; m < ngrp; ++m){
                     yscnt +=int(sy2  > 0);
                     dgscnt+=int(sdg2 > 0);
@@ -142,26 +145,6 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
                     scg2 >>= 1;
                     sco2 >>= 1;
                 }
-                //for(int32_t m=0; m < ngrp; ++m){
-                //    if( sy2 == 0) break;
-                //    sy2 >>= 1;
-                //    yscnt++;
-                //}
-                //for(int32_t m=0; m < ngrp; ++m){
-                //    if( sdg2 == 0) break;
-                //    sdg2 >>= 1;
-                //    dgscnt++;
-                //}
-                //for(int32_t m=0; m < ngrp; ++m){
-                //    if( scg2 == 0) break;
-                //    scg2 >>= 1;
-                //    cgscnt++;
-                //}
-                //for(int32_t m=0; m < ngrp; ++m){
-                //    if( sco2 == 0) break;
-                //    sco2 >>= 1;
-                //    coscnt++;
-                //}                
 
                 ybcnt = ybcnt >= 1 ? ybcnt-1 : 0;
                 dgbcnt= dgbcnt>= 1 ? dgbcnt-1: 0;
@@ -230,31 +213,7 @@ void enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const Mss
     fclose(fp3);
     #endif
 }
-static inline void retrv(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp, uint32_t& td, uint32_t blen){
-    uint8_t b = rRow[pos];
-    b >>= bp;
-    td = 0;
-    for(int32_t m=0; m < blen; ++m){
-        td |= (b & 0x1) << m;
-        b >>= 1;
-        bp++;
-        if(bp >=8){
-            ++pos;
-            b = rRow[pos];
-            bp=0;
-        }
-    }
-}
-static inline void getgsbits(vector<uint8_t>& rRow, uint32_t& pos, uint32_t& bp, uint32_t& td, uint32_t blen, uint32_t sgp, uint32_t sgpcd){
-    uint32_t mx = (1U << sgpcd)-1;
-    if(blen >= mx){
-        retrv(rRow, pos, bp, td, sgp);
-    }else{
-        retrv(rRow, pos, bp, td, blen);
-    }
-}
-void dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info,
-    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+void Entropy::dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
 {
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
@@ -446,8 +405,7 @@ static inline void dec_gmrice(uint32_t& dat, const vector<uint8_t>& bstm, uint32
     Revr_golombrice(dat, gr, K);
 }
 
-void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info, 
-    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
 {
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
@@ -499,13 +457,19 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
                     vector<uint8_t> Kvec(ngrp*4*2*16, 0);
                     uint32_t pos2 = 0;
                     uint32_t bp2 = 0;
+                    // bit length of Golomb-Rice code for value v with parameter K is (v>>K)+1+K;
+                    // computed analytically instead of actually packing into a fixed-size scratch
+                    // buffer, since the unary quotient part is unbounded and can exceed any fixed size.
+                    uint32_t totalbits = 0;
                     for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
-                        enc_gmrice(msstv[m].mY   , Kvec, pos2, bp2, t);
-                        enc_gmrice(msstv[m].mYdDg, Kvec, pos2, bp2, t);
-                        enc_gmrice(msstv[m].mCbCg, Kvec, pos2, bp2, t);
-                        enc_gmrice(msstv[m].mCrCo, Kvec, pos2, bp2, t);
+                        totalbits += (msstv[m].mY    >> t) + 1 + t;
+                        totalbits += (msstv[m].mYdDg >> t) + 1 + t;
+                        totalbits += (msstv[m].mCbCg >> t) + 1 + t;
+                        totalbits += (msstv[m].mCrCo >> t) + 1 + t;
                     }
-                    if((pos2 < mnpos ) || 
+                    uint32_t pos2 = totalbits / 8;
+                    uint32_t bp2  = totalbits % 8;
+                    if((pos2 < mnpos ) ||
                        (pos2 == mnpos && bp2 < mnbp)){
                         mnpos = pos2;
                         mnbp  = bp2;
@@ -579,6 +543,9 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
         if(r < 2 || r == 268){
             fprintf(stdout, "row %d size: %d \n", r, getRowCmpSize(rRow));
         }
+        if(pos >= (2L << 16)){
+            fprintf(stdout, "Error row %d size: %d \n", r, pos);
+        }
         tsz += pos; 
     }
     fprintf(stdout, "Total Compressed size including each row size: %u\n", tsz);
@@ -588,8 +555,7 @@ void enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
     fclose(fp3);
     #endif
 }
-void dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const MsstInfo& msst_info,
-    const ProcessInfo& proc_info, const QuantInfo& quant_info )
+void Entropy::dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
 {
     //--   +----+----+----+----+----+----+----+----+----+
     //--   | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 0  |
@@ -686,4 +652,20 @@ void dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv, const 
     fclose(fp);
     fclose(fp2);
     #endif
+}
+void Entropy::enc_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
+{
+    if(proc_info.sel_entp){
+        enc_entropy_gr(bitv, msstv);
+    }else{
+        enc_entropy_bc(bitv, msstv);
+    }
+}
+void Entropy::dec_entropy(vector<vector<uint8_t>>& bitv, vector<msstSm>& msstv )
+{
+    if(proc_info.sel_entp){
+        dec_entropy_gr(bitv, msstv);
+    }else{
+        dec_entropy_bc(bitv, msstv);
+    }
 }
