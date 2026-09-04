@@ -22,6 +22,7 @@ dwt_lv  = 1
 ngrp    = 8
 sgpcd   = 1
 sel_ycc = false 
+sel_entp= false
 
 ### Quantization parameters
 Qp = 5
