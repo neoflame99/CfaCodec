@@ -436,7 +436,9 @@ void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
         for(int32_t l=proc_info.dwt_lv+1; l > 0; --l){
             int32_t sl = l > proc_info.dwt_lv ? proc_info.dwt_lv : l; 
             tw = msst_info.w >> sl;
-            for(int32_t c=0; c < tw; c+=ngrp, k+=ngrp){
+            for(int32_t c=0; c < tw; c+=ngrp){
+                const int32_t group_size = std::min<int32_t>(ngrp, tw - c);
+                assert(group_size >= NSGRP && group_size % NSGRP == 0);
 
                 //--------------------------------------------------------
                 // ngrp mY -> ngrp mDg -> ngrp mCg -> ngrp mCo ->
@@ -452,7 +454,7 @@ void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
                     // computed analytically instead of actually packing into a fixed-size scratch
                     // buffer, since the unary quotient part is unbounded and can exceed any fixed size.
                     uint32_t totalbits = 0;
-                    for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
+                    for(int32_t n=0, m=k; n < group_size; ++n, ++m){
                         totalbits += (msstv[m].mY    >> t) + 1 + t;
                         totalbits += (msstv[m].mYdDg >> t) + 1 + t;
                         totalbits += (msstv[m].mCbCg >> t) + 1 + t;
@@ -469,15 +471,14 @@ void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
                 }
                 //-- encode with optimum K
                 fillbits(rRow, pos, bp, K-1, KBSZ); //KBSZ: 4-bit K(1~16 -> 0~15)
-                for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
+                for(int32_t n=0, m=k; n < group_size; ++n, ++m){
                     enc_gmrice(msstv[m].mY   , rRow, pos, bp, K);
                     enc_gmrice(msstv[m].mYdDg, rRow, pos, bp, K);
                     enc_gmrice(msstv[m].mCbCg, rRow, pos, bp, K);
                     enc_gmrice(msstv[m].mCrCo, rRow, pos, bp, K);
                 }
 
-                assert(ngrp >= NSGRP && ngrp % NSGRP == 0);
-                int32_t iter = ngrp / NSGRP;
+                int32_t iter = group_size / NSGRP;
                 for(int32_t i=0, m=k; i < iter; ++i, m += NSGRP){
                     yscnt = 0;
                     dgscnt= 0;
@@ -522,6 +523,7 @@ void Entropy::enc_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
                     fillbits(rRow, pos, bp, scocd , sgpcd);
                     putgsbits(rRow, pos, bp, sco  , scocd, NSGRP, sgpcd);
                 }
+                k += group_size;
             }
         }
         #ifdef _DUMP2_
@@ -578,7 +580,12 @@ void Entropy::dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
         pos = SZSZ;
         bp = 0;
         rsz = getRowCmpSize(rRow);
-        for(int32_t c=0; pos < rsz; k+=ngrp, c+=ngrp){
+        for(int32_t l=proc_info.dwt_lv+1; l > 0; --l){
+            int32_t sl = l > proc_info.dwt_lv ? proc_info.dwt_lv : l;
+            tw = msst_info.w >> sl;
+            for(int32_t c=0; c < tw; c+=ngrp){
+                const int32_t group_size = std::min<int32_t>(ngrp, tw - c);
+                assert(group_size >= NSGRP && group_size % NSGRP == 0);
             //--------------------------------------------------------
             // ngrp mY -> ngrp mDg -> ngrp mCg -> ngrp mCo ->
             // signs mY -> signs mDg -> signs mCg -> signs mCo
@@ -587,15 +594,14 @@ void Entropy::dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
             uint32_t K;
             retrv(rRow, pos, bp, K, KBSZ ); //KBSZ: 4-bit K(1~16 -> 0~15)
             K++;
-            for(int32_t n=0, m=k; n < ngrp; ++n, ++m){
+            for(int32_t n=0, m=k; n < group_size; ++n, ++m){
                 dec_gmrice(msstv[m].mY   , rRow, pos, bp, K);
                 dec_gmrice(msstv[m].mYdDg, rRow, pos, bp, K);
                 dec_gmrice(msstv[m].mCbCg, rRow, pos, bp, K);
                 dec_gmrice(msstv[m].mCrCo, rRow, pos, bp, K);
             }
 
-            assert(ngrp >= NSGRP && ngrp % NSGRP == 0);
-            int32_t iter = ngrp / NSGRP;
+            int32_t iter = group_size / NSGRP;
             for(int32_t i=0, m=k; i < iter; ++i, m += NSGRP){
 
                 int32_t E = m+NSGRP;
@@ -626,6 +632,8 @@ void Entropy::dec_entropy_gr(vector<vector<uint8_t>>& bitv, vector<msstSm>& msst
             fprintf(fp,"[k%6d,pos%4d,yc%2d,dgc%2d,cgc%2d,coc%2d],",k, pos, ybcnt, dgbcnt, cgbcnt, cobcnt);
             fprintf(fp2,"[k%4d, mY: %6d, %6d, %6d, %6d, sY: %1d, %1d, %1d, %1d]\n",k, msstv[k].mY, msstv[k+1].mY, msstv[k+2].mY, msstv[k+3].mY, msstv[k].sY, msstv[k+1].sY, msstv[k+2].sY, msstv[k+3].sY);
             #endif
+                k += group_size;
+            }
         }
         //fprintf(stdout,"\n");
         #ifdef _DUMP2_
