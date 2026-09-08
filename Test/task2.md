@@ -13,7 +13,7 @@ bitstream_filename:  each folder path + its folder name + '.bin'
 codec_report_filename:  each folder path + its folder name + '.rpt'
 dec_cfa_filename = each folder path + 'bayer_dec'+each folder name + '.raw'
 
-dwt_lv, ngrp, sgpcd, nlt, sel_ycc, Qp, Gb[0] ~ Gb[4]: extract values from folder names.
+dwt_lv, ngrp, sgpcd, sel_entp, sel_ycc, Qp, Gb[0] ~ Gb[4]: extract values from folder names.
 others: copy parameters from 'ctest/parametes.txt'.
 
 ### Making shell script
