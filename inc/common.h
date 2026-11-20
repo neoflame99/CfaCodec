@@ -28,7 +28,20 @@ using namespace std;
 #define SGPCD 1 
 
 struct msstSm;
-
+enum class cfaType{
+    RG_GB = 0,
+    GR_BG = 1,
+    GB_RG = 2,
+    RG_GB = 3,
+    RGBG_GI = 4,
+    GBGR_IG = 5,
+    GI_RGBG = 6,
+    IG_GBGR = 7, 
+    BGRG_GI = 8,
+    GRGB_IG = 9,
+    GI_BGRG =10,
+    IG_GRGB =11
+};
 typedef int32_t cfapix;
 struct cfa_fmt{
     cfapix *pCfa;
@@ -38,7 +51,7 @@ struct cfa_fmt{
 struct BayerInfo{
     int32_t w;
     int32_t h;
-    int32_t cfa_pat;
+    cfaType cfa_pat;
     int32_t bpp;
 };
 struct BayerImgInfo{
