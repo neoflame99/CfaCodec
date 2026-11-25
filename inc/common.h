@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <stdexcept>
 #include <cmath>
 
 using namespace std;
@@ -32,7 +33,7 @@ enum class cfaType{
     RG_GB = 0,
     GR_BG = 1,
     GB_RG = 2,
-    RG_GB = 3,
+    BG_GR = 3,
     RGBG_GI = 4,
     GBGR_IG = 5,
     GI_RGBG = 6,
@@ -42,6 +43,20 @@ enum class cfaType{
     GI_BGRG =10,
     IG_GRGB =11
 };
+struct BayerPhase {
+    bool red_on_odd_row;
+    bool red_on_odd_col;
+};
+
+inline BayerPhase bayer_phase(cfaType pattern){
+    switch(pattern){
+        case cfaType::RG_GB: return {false, false};
+        case cfaType::GR_BG: return {false, true};
+        case cfaType::GB_RG: return {true, false};
+        case cfaType::BG_GR: return {true, true};
+        default: throw std::invalid_argument("Expected a 2x2 RGB Bayer pattern");
+    }
+}
 typedef int32_t cfapix;
 struct cfa_fmt{
     cfapix *pCfa;
@@ -59,6 +74,7 @@ struct BayerImgInfo{
     int32_t w;
     int32_t h;
     int32_t bpp;
+    int32_t cfa_fmt; // 0: RG_GB, 1: GR_BG, 2: GB_RG, 3: BG_GR
     bool csi2_style = false; // false: compact bitstream, true: CSI-2 RAW packing
     bool excess_bytes_as_offset = true; // true: skip leading excess, false: drop trailing excess
 };

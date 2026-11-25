@@ -13,9 +13,16 @@ void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer
     const ProcessInfo& proc_info, const QuantInfo& quant_info)
 {
 
+    bool sel_ir = (static_cast<int32_t>(bayer_info.cfa_pat) >= 4);
+
     MsstInfo msst_info;
-    msst_info.w = bayer_info.w >> 1;
-    msst_info.h = bayer_info.h >> 1;
+    if(sel_ir){
+        msst_info.w = bayer_info.w >> 2;
+        msst_info.h = bayer_info.h;
+    }else{
+        msst_info.w = bayer_info.w >> 1;
+        msst_info.h = bayer_info.h >> 1;
+    }
     vector<msst> msstv( msst_info.w * msst_info.h, msst());
 
     int32_t mxv = (1U << bayer_info.bpp) - 1;
@@ -48,9 +55,15 @@ void bayer_fdwt(vector<msstSm>& dst, vector<cfapix>& src, const BayerInfo& bayer
 void bayer_idwt(vector<cfapix>& dst, vector<msstSm>& src, const BayerInfo& bayer_info,
     const ProcessInfo& proc_info, const QuantInfo& quant_info)
 {
+    bool sel_ir = (static_cast<int32_t>(bayer_info.cfa_pat) >= 4);
     MsstInfo msst_info;
-    msst_info.w = bayer_info.w >> 1;
-    msst_info.h = bayer_info.h >> 1;
+    if(sel_ir){
+        msst_info.w = bayer_info.w >> 2;
+        msst_info.h = bayer_info.h;
+    }else{
+        msst_info.w = bayer_info.w >> 1;
+        msst_info.h = bayer_info.h >> 1;
+    }
     vector<msst> msstv(msst_info.w * msst_info.h, msst());
 
     int32_t mxv = (1U << bayer_info.bpp) - 1;

@@ -73,8 +73,16 @@ int main(int args, char* argv[]){
             cfaimg[i] = cfaorg[i];
         }
     }
-    BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, 0, bayer_img_info.bpp};
-    MsstInfo msst_info{bayer_img_info.w/2, bayer_img_info.h/2};
+    BayerInfo bayer_info{bayer_img_info.w, bayer_img_info.h, static_cast<cfaType>(bayer_img_info.cfa_fmt), bayer_img_info.bpp};
+    MsstInfo msst_info;
+    bool sel_ir = (static_cast<int32_t>(bayer_info.cfa_pat) >= 4);
+    if(sel_ir){
+        msst_info.w = bayer_info.w >> 2;
+        msst_info.h = bayer_info.h;
+    }else{
+        msst_info.w = bayer_info.w >> 1;
+        msst_info.h = bayer_info.h >> 1;
+    }
 
     vector<vector<uint8_t>> entp;
     for(int32_t k=0; k < msst_info.h; ++k){

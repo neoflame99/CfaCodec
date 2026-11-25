@@ -36,30 +36,12 @@ static uint8_t cfapix_upper8(cfapix value, int32_t bpp){
     return 0;
 }
 
-static int bayer_channel(int32_t pattern, int32_t y, int32_t x){
-    const bool odd_y = (y & 1) != 0;
-    const bool odd_x = (x & 1) != 0;
-
-    switch(pattern){
-        case 0: // rggb
-            if(!odd_y && !odd_x) return 0;
-            if( odd_y &&  odd_x) return 2;
-            return 1;
-        case 1: // grbg
-            if(!odd_y &&  odd_x) return 0;
-            if( odd_y && !odd_x) return 2;
-            return 1;
-        case 2: // gbrg
-            if( odd_y && !odd_x) return 0;
-            if(!odd_y &&  odd_x) return 2;
-            return 1;
-        case 3: // bggr
-            if( odd_y &&  odd_x) return 0;
-            if(!odd_y && !odd_x) return 2;
-            return 1;
-        default:
-            return 1;
-    }
+static int bayer_channel(BayerPhase phase, int32_t y, int32_t x){
+    const bool red_row = ((y & 1) != 0) == phase.red_on_odd_row;
+    const bool red_col = ((x & 1) != 0) == phase.red_on_odd_col;
+    if(red_row && red_col) return 0;
+    if(!red_row && !red_col) return 2;
+    return 1;
 }
 
 } // namespace
@@ -89,6 +71,7 @@ void savebayertxt(const vector<cfapix> &cfaimg, const string& filename, const Ba
 }
 
 void savebayerbmp(const vector<cfapix> &cfaimg, const string& filename, const BayerInfo& bayer_info){
+    const BayerPhase phase = bayer_phase(bayer_info.cfa_pat);
     const size_t numpixels = cfaimg.size();
     const size_t expected_pixels = static_cast<size_t>(bayer_info.w) * static_cast<size_t>(bayer_info.h);
     if(expected_pixels != numpixels){
@@ -139,7 +122,7 @@ void savebayerbmp(const vector<cfapix> &cfaimg, const string& filename, const Ba
             const size_t index = static_cast<size_t>(y) * static_cast<size_t>(bayer_info.w) + static_cast<size_t>(x);
             const uint8_t value = cfapix_upper8(cfaimg[index], bayer_info.bpp);
             uint8_t bgr[3] = {0, 0, 0};
-            const int channel = bayer_channel(bayer_info.cfa_pat, y, x);
+            const int channel = bayer_channel(phase, y, x);
             if(channel == 0){
                 bgr[2] = value;
             }else if(channel == 1){
@@ -402,7 +385,7 @@ void write_report(const string& fname,const BayerInfo& bayer_info,
     fprintf(fp, "Bayer Info:\n");
     fprintf(fp, "    width  : %5d\n", bayer_info.w);
     fprintf(fp, "    height : %5d\n", bayer_info.h);
-    fprintf(fp, "    pattern: %5d //0: rggb, 1: grbg, 2: gbrg, 3: bggr\n", bayer_info.cfa_pat);
+    fprintf(fp, "    pattern: %5d //0: rggb, 1: grbg, 2: gbrg, 3: bggr\n", static_cast<int>(bayer_info.cfa_pat));
     fprintf(fp, "    bpp    : %5d\n", bayer_info.bpp);
     fprintf(fp, "Save Info:\n");
     fprintf(fp, "    bitstream size : %zu bytes\n", tsz);

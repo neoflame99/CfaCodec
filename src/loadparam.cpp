@@ -72,12 +72,14 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
     BayerImgInfo parsed_info;
     parsed_info.csi2_style = false;
     parsed_info.excess_bytes_as_offset = true;
+    parsed_info.cfa_fmt = 0; // default to RG_GB
     QuantInfo parsed_quant_info;
     parsed_quant_info.Qp = 5;
     bool gb_specified[MNB] = {};
     bool has_filename = false;
     bool has_width = false;
     bool has_height = false;
+    bool has_cfafmt = false;
     bool has_bpp = false;
     bool has_invalid_quant_param = false;
 
@@ -119,6 +121,8 @@ bool loadBayerImgInfo(BayerImgInfo& bayer_img_info, SaveInfo& save_info, Process
             has_width = parseInt(value, parsed_info.w);
         }else if(key == "height"){
             has_height = parseInt(value, parsed_info.h);
+        }else if(key == "cfa_fmt"){
+            has_cfafmt = parseInt(value, parsed_info.cfa_fmt);
         }else if(key == "bpp"){
             has_bpp = parseInt(value, parsed_info.bpp);
         }else if(key == "Qp"){
